@@ -1,0 +1,2 @@
+thinking-modules>=0.0.1
+thinking-runtime>=0.0.2

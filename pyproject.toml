@@ -1,0 +1,31 @@
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thinking-injection"
+version = "0.0.1"
+description = "DI framework"
+readme = "README.md"
+authors = [{ name = "Filip Malczak", email = "filip.malczak@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed"
+]
+keywords = ["thinking", "dependency", "injection", "di"]
+dependencies = [
+    "recursive-import>=1.0.0",
+    "thinking-runtime"
+]
+requires-python = ">=3.12"
+
+[project.urls]
+Homepage = "https://github.com/FilipMalczak/thinking-injection"
+
+[tool.setuptools]
+packages = ["thinking_injection", "thinking_programming"]
