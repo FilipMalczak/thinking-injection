@@ -1,5 +1,5 @@
 from thinking_tests.decorators import case
-from thinking_tests.start import run_current_module
+from thinking_tests.running.start import run_current_module
 
 from thinking_injection.lifecycle import CustomInitializable, composite_lifecycle
 

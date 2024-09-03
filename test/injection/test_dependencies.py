@@ -1,9 +1,7 @@
-from typing import Optional, Union
-
 from thinking_tests.decorators import case
-from thinking_tests.start import run_current_module
+from thinking_tests.running.start import run_current_module
 
-from test.class_fixtures import *
+from test.injection.class_fixtures import *
 from test.util import assert_fails
 from thinking_injection.dependencies import unpack_dependency, DependencyKind, get_dependencies, Dependency
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import auto, Enum
 
 from thinking_tests.decorators import case
-from thinking_tests.start import run_current_module
+from thinking_tests.running.start import run_current_module
 
 from thinking_programming.serialization import SerializableMixin, PolymorphicSerializableMixin
 
