@@ -11,6 +11,13 @@ class ImplementationDetails(NamedTuple):
     implementations: ImmutableTypeSet
     primary: ConcreteType
 
+    def __str__(self):
+        impls = "{"+ (", ".join(x.__name__ for x in self.implementations)) + "}"
+        prim = self.primary.__name__
+        return f"{type(self).__name__}(primary={prim}, implementations={impls})"
+
+    __repr__ = __str__
+
 
 @dataclass
 class MutableImplementationDetails:
@@ -79,3 +86,6 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
         for t, i in force.items():
             data[t].primary = i
         return cls({k: v.freeze() for k, v in data.items()})
+
+    def __str__(self):
+        return f"{type(self).__name__}({'{'}{', '.join(t.__name__+': '+str(self[t]) for t in self)}{'}'})"

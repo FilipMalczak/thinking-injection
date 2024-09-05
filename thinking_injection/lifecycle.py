@@ -80,10 +80,14 @@ class ReentrantLifecycleProxy[T: HasLifecycle](HasLifecycle):
         if self.already_entered:
             yield
         else:
-            self.already_entered = True
-            with self.delegate.lifecycle():
-                yield
-            self.already_entered = False
+            #this is probably an overkill, but if python loses GIL, we may be already in luck
+            prev_entered = self.already_entered
+            try:
+                self.already_entered = True
+                with self.delegate.lifecycle():
+                    yield
+            finally:
+                self.already_entered = prev_entered
 
     def __getattr__(self, item):
         return getattr(self.delegate, item)
