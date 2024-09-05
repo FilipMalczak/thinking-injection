@@ -1,0 +1,3 @@
+thinking-modules
+thinking-runtime
+thinking-tests
