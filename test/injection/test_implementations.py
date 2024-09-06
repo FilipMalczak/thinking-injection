@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
@@ -17,6 +19,13 @@ def test_fixture_impls():
         for t in typeset
     })
     assert expected == impls
+
+@case
+def failure():
+    print("THIS WILL FAIL")
+    l = getLogger(__name__)
+    l.info("THIS TOO SHALL FAIL")
+    assert False
 
 class ConcreteParent: pass
 
