@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, NamedTuple
 
 DISCOVERED_TYPES = set()
 
@@ -8,20 +8,18 @@ def discover[T: type](t: T) -> T:
     return t
 
 
-def get_primary_hint[T: type, I: type](t: T) -> I | None:
-    try:
-        return t.__primary_implementation__
-    except AttributeError:
-        return None
+class PrimaryImplementation[B: type, I: type](NamedTuple):
+    base: B
 
+    def get(self) -> I:
+        return PrimaryImplementation.DATA.get(self.base, None)
 
-def set_primary_hint[B: type, I: type](base: B, impl: I):
-    assert get_primary_hint(base) is None #todo msg
-    base.__primary_implementation__ = impl
-
-
-def primary_implementation_of[B: type, I: type](base: B) -> Callable[[I], I]:
-    def decorator(impl: I) -> I:
-        set_primary_hint(base, impl)
+    def set(self, impl: I) -> I:
+        assert self.get() is None
+        PrimaryImplementation.DATA[self.base] = impl
         return impl
-    return decorator
+
+    def __call__(self, impl: I) -> I:
+        return self.set(impl)
+
+PrimaryImplementation.DATA = {}

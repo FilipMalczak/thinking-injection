@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import NamedTuple, Self
 
-from thinking_injection.discovery import get_primary_hint
+from thinking_injection.discovery import PrimaryImplementation
 from thinking_injection.guardeddict import GuardedDict
 from thinking_injection.interfaces import ConcreteClass, ConcreteType
 from thinking_injection.typeset import TypeSet, ImmutableTypeSet, freeze
@@ -12,8 +12,8 @@ class ImplementationDetails(NamedTuple):
     primary: ConcreteType
 
     def __str__(self):
-        impls = "{"+ (", ".join(x.__name__ for x in self.implementations)) + "}"
-        prim = self.primary.__name__
+        impls = "{"+ (", ".join(sorted(x.__name__ for x in self.implementations))) + "}"
+        prim = self.primary.__name__ if self.primary is not None else str(None)
         return f"{type(self).__name__}(primary={prim}, implementations={impls})"
 
     __repr__ = __str__
@@ -74,8 +74,8 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
                         data[base].add(t)
         for t in types:
             details = data[t]
-            hint = get_primary_hint(t)
-            if hint is not None:
+            hint = PrimaryImplementation(t).get()
+            if hint is not None and hint in types:
                 details.primary = hint
             if details.primary is None and len(details.implementations) == 1:
                 details.primary = list(details.implementations)[0]
@@ -88,4 +88,4 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
         return cls({k: v.freeze() for k, v in data.items()})
 
     def __str__(self):
-        return f"{type(self).__name__}({'{'}{', '.join(t.__name__+': '+str(self[t]) for t in self)}{'}'})"
+        return f"{type(self).__name__}({'{'}{', '.join(sorted(t.__name__+': '+str(self[t]) for t in self))}{'}'})"

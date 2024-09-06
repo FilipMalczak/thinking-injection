@@ -1,13 +1,12 @@
 
+INTERFACES: set[type] = set()
+
 def interface[T: type](t: T) -> T:
-    t.__is_interface__ = True
+    INTERFACES.add(t)
     return t
 
 def is_interface[T: type](t: T) -> bool:
-    try:
-        return t.__is_interface__
-    except AttributeError:
-        return False
+    return t in INTERFACES
 
 
 def is_concrete[T: type](t: T) -> bool:
