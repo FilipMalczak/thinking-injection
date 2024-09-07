@@ -35,6 +35,23 @@ jobs:
         run: |
           python -m test.run_all
 
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Unit tests (${{matrix.os}}, ${{ matrix.python-version }}, ${{ github.event_name }})
+          path: ./test_report.xml
+          reporter: java-junit
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          env_vars: OS,PYTHON
+          flags: ${{matrix.os}}, ${{matrix.os}}-${{ matrix.python-version }}, ${{ matrix.python-version }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
       - name: Upload XML test report
         uses: actions/upload-artifact@v4
         with:
@@ -67,20 +84,3 @@ jobs:
 #        with:
 #          recreate: true
 #          path: code-coverage-results.md
-
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage.xml
-          env_vars: OS,PYTHON
-          flags: ${{matrix.os}}, ${{matrix.os}}-${{ matrix.python-version }}, ${{ matrix.python-version }}
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
-
-      - name: Publish test report
-        uses: dorny/test-reporter@v1
-        if: success() || failure()
-        with:
-          name: Unit tests (${{matrix.os}}, ${{ matrix.python-version }}, ${{ github.event_name }})
-          path: ./test_report.xml
-          reporter: java-junit
