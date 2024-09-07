@@ -84,18 +84,3 @@ jobs:
           name: Unit tests (${{matrix.os}}, ${{ matrix.python-version }}, ${{ github.event_name }})
           path: ./test_report.xml
           reporter: java-junit
-#      - name: Publish test report
-#        uses: EnricoMi/publish-unit-test-result-action/linux@v2
-#        if: always() && matrix.os == 'ubuntu-latest'
-#        with:
-#          check_name: Unit tests (${{matrix.os}}, ${{ matrix.python-version }})
-#          files: |
-#            ./test_report.xml
-#
-#      - name: Publish test report
-#        uses: EnricoMi/publish-unit-test-result-action/macos@v2
-#        if: always() && matrix.os == 'macos-latest'
-#        with:
-#          check_name: Unit tests (${{matrix.os}}, ${{ matrix.python-version }})
-#          files: |
-#            ./test_report.xml

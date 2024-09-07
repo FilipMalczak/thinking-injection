@@ -20,12 +20,6 @@ def test_fixture_impls():
     })
     assert expected == impls
 
-@case
-def failure():
-    print("THIS WILL FAIL")
-    l = getLogger(__name__)
-    l.info("THIS TOO SHALL FAIL")
-    assert False
 
 class ConcreteParent: pass
 
