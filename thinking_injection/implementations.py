@@ -38,6 +38,11 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
         assert v is not None
         assert isinstance(v, ImplementationDetails)
 
+    def __getitem__(self, item: type) -> ImplementationDetails:
+        if item in self:
+            return dict.__getitem__(self, item)
+        return ImplementationDetails(frozenset(), None)
+
     @classmethod
     def build(cls, types: TypeSet, defaults: dict[type, type] = None, force: dict[type, type] = None) -> Self:
         """
