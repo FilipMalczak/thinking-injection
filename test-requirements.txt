@@ -1,1 +1,2 @@
 thinking-tests>=0.0.4
+deepdiff>=8.0.1

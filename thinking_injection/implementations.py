@@ -4,6 +4,7 @@ from typing import NamedTuple, Self
 from thinking_injection.discovery import PrimaryImplementation
 from thinking_injection.guardeddict import GuardedDict
 from thinking_injection.interfaces import ConcreteClass, ConcreteType
+from thinking_injection.scope import ContextScope
 from thinking_injection.typeset import TypeSet, ImmutableTypeSet, freeze
 
 
@@ -33,6 +34,10 @@ class MutableImplementationDetails:
 
 
 class Implementations(GuardedDict[type, ImplementationDetails]):
+    def __init__(self, data: dict[type, ImplementationDetails], scope: ContextScope):
+        GuardedDict.__init__(self, data)
+        self.scope = scope
+
     def __guard__(self, k: type, v: ImplementationDetails):
         assert isinstance(k, type) #todo allow for parametrized types; out of MVP
         assert v is not None
@@ -44,30 +49,15 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
         return ImplementationDetails(frozenset(), None)
 
     @classmethod
-    def build(cls, types: TypeSet, defaults: dict[type, type] = None, force: dict[type, type] = None) -> Self:
+    def build(cls, scope: ContextScope) -> Self:
         """
         :param types - all the known types, including interfaces; basically keyset of dependency graph
         :param defaults - use these as primary implementations only if there is more than one implementation
         :param force - use these as primary implementations unconditionally; can be used to enforce implementation or to provide defaults
         """
-        defaults = defaults or {}
-        assert all(
-            isinstance(k, type) and
-            isinstance(v, type) and
-            k in types and
-            v in types and
-            issubclass(v, k)
-            for k, v in defaults.items()
-        ) #todo msg
-        force = force or {}
-        assert all(
-            isinstance(k, type) and
-            isinstance(v, type) and
-            k in types and
-            v in types and
-            issubclass(v, k)
-            for k, v in force.items()
-        )  # todo msg
+        types = scope.types
+        defaults = scope.defaults
+        forced = scope.forced
         data = {
             t: MutableImplementationDetails()
             for t in types
@@ -88,9 +78,9 @@ class Implementations(GuardedDict[type, ImplementationDetails]):
                 details.primary = t
             if details.primary is None and t in defaults:
                 details.primary = defaults[t]
-        for t, i in force.items():
+        for t, i in forced.items():
             data[t].primary = i
-        return cls({k: v.freeze() for k, v in data.items()})
+        return cls({k: v.freeze() for k, v in data.items()}, scope)
 
     def __str__(self):
         return f"{type(self).__name__}({'{'}{', '.join(sorted(t.__name__+': '+str(self[t]) for t in self))}{'}'})"

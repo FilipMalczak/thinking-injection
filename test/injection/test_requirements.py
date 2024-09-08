@@ -1,9 +1,11 @@
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
+from test.util import assert_equals
 from thinking_injection.injectable import Injectable
 from thinking_injection.interfaces import interface
 from thinking_injection.requirements import RequirementsGraph
+from thinking_injection.scope import ContextScope
 
 
 class SimpleDependency: pass
@@ -17,30 +19,30 @@ class OptionalDependent(Injectable):
 
 @case
 def test_simple_dependency():
-    reqs = RequirementsGraph.build(set([SimpleDependency, SimpleDependent]))
+    reqs = RequirementsGraph.build(ContextScope.of(SimpleDependency, SimpleDependent))
     expected = RequirementsGraph({
         SimpleDependent: set([SimpleDependency]),
         SimpleDependency: set()
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 @case
 def test_optional_dependency_present():
-    reqs = RequirementsGraph.build(set([SimpleDependency, OptionalDependent]))
+    reqs = RequirementsGraph.build(ContextScope.of(SimpleDependency, OptionalDependent))
     expected = RequirementsGraph({
         OptionalDependent: set([SimpleDependency]),
         SimpleDependency: set()
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 
 @case
 def test_optional_dependency_missing():
-    reqs = RequirementsGraph.build(set([OptionalDependent]))
+    reqs = RequirementsGraph.build(ContextScope.of(OptionalDependent))
     expected = RequirementsGraph({
         OptionalDependent: set(),
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 @interface
 class Inter: pass
@@ -54,42 +56,40 @@ class DependsOnInter(Injectable):
 
 @case
 def test_collective_of_interface_wo_impls():
-    reqs = RequirementsGraph.build(set([DependsOnInter]))
+    reqs = RequirementsGraph.build(ContextScope.of(DependsOnInter))
     expected = RequirementsGraph({
         DependsOnInter: set()
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
-    reqs = RequirementsGraph.build(set([DependsOnInter, Inter]))
+    reqs = RequirementsGraph.build(ContextScope.of(DependsOnInter, Inter))
     expected = RequirementsGraph({
-        DependsOnInter: set(),
-        Inter: set()
-    })
-    assert expected == reqs
+        DependsOnInter: set()
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 @case
 def test_collective_of_interface_w_single_impl():
-    reqs = RequirementsGraph.build(set([DependsOnInter, Inter, Impl1]))
+    reqs = RequirementsGraph.build(ContextScope.of(DependsOnInter, Inter, Impl1))
     expected = RequirementsGraph({
         DependsOnInter: set([Impl1]),
-        Inter: set(),
         Impl1: set()
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 
 @case
 def test_collective_of_interface_w_multiple_impls():
-    reqs = RequirementsGraph.build(set([DependsOnInter, Inter, Impl1, Impl2]))
+    reqs = RequirementsGraph.build(ContextScope.of(DependsOnInter, Inter, Impl1, Impl2))
     expected = RequirementsGraph({
         DependsOnInter: set([Impl1, Impl2]),
-        Inter: set(),
         Impl1: set(),
         Impl2: set()
-    })
-    assert expected == reqs
+    }, reqs.dependencies, reqs.implementations)
+    assert_equals(expected, reqs)
 
 if __name__ == "__main__":
-    run_current_module()
-    # test_optional_dependency_missing()
+    # run_current_module()
+    test_optional_dependency_missing()
     # test_collective_of_interface_w_single_impl()
+    # test_collective_of_interface_w_multiple_impls()

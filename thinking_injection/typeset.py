@@ -9,6 +9,8 @@ from thinking_injection.discovery import DISCOVERED_TYPES
 TypeSet = set[type]
 ImmutableTypeSet = frozenset[type]
 
+TypeAliasing = dict[type, type]
+
 def types(*t: type) -> TypeSet:
     return set(*t)
 

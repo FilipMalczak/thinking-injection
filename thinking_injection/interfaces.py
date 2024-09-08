@@ -1,9 +1,18 @@
+from typing import runtime_checkable
+
+from thinking_injection.discovery import discover
 
 INTERFACES: set[type] = set()
 
 def interface[T: type](t: T) -> T:
+    try:
+        if t._is_protocol:
+            t = runtime_checkable(t)
+    except AttributeError:
+        pass
+
     INTERFACES.add(t)
-    return t
+    return discover(t)
 
 def is_interface[T: type](t: T) -> bool:
     return t in INTERFACES

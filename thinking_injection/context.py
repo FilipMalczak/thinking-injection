@@ -2,12 +2,13 @@ from abc import abstractmethod
 from contextlib import contextmanager
 from typing import NamedTuple, ContextManager, Callable, runtime_checkable, Protocol
 
-from thinking_injection.dependencies import DependencyGraph
+from thinking_injection.dependencies import DependencyGraph, Dependency, DependencyKind
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.implementations import Implementations
 from thinking_injection.injectable import Injectable
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
 from thinking_injection.requirements import RequirementsGraph
+from thinking_injection.scope import ContextScope
 from thinking_injection.typeset import TypeSet
 
 
@@ -67,19 +68,29 @@ class Context(HasLifecycle, Protocol):
 #todo context itself cannot be injected just yet
 
 class BasicContext(NamedTuple):
-    dependencies: DependencyGraph
-    implementations: Implementations
     requirements: RequirementsGraph
     cyclic_resolver: TypeComparator
     lifecycles: dict[type, ObjectLifecycle]
 
+    @property
+    def dependencies(self) -> DependencyGraph:
+        return self.requirements.dependencies
+
+    @property
+    def implementations(self) -> Implementations:
+        return self.requirements.implementations
+
+    @property
+    def scope(self) -> ContextScope:
+        return self.requirements.scope
+
+    #todo types property?
+
     @classmethod
-    def build(cls, types: TypeSet, defaults: dict[type, type] = None, force: dict[type, type] = None, cyclic_resolver: TypeComparator = None):
-        dependencies = DependencyGraph.build(types)
-        implementations = Implementations.build(set(dependencies.keys()), defaults, force)
-        requirements = RequirementsGraph.build(dependencies, implementations)
+    def build(cls, scope: ContextScope, cyclic_resolver: TypeComparator = None):
+        requirements = RequirementsGraph.build(scope)
         lifecycles: dict[type, ObjectLifecycle] = {}
-        return cls(dependencies, implementations, requirements, cyclic_resolver, lifecycles)
+        return cls(requirements, cyclic_resolver, lifecycles)
 
     def instance[T](self, t: type[T]) -> T:
         return self.lifecycles[self.implementations[t].primary].target
@@ -95,11 +106,20 @@ class BasicContext(NamedTuple):
             return LifecycleDelegator(instance)
         return ValueLifecycle(instance)
 
+    def _to_target(self, d: Dependency):
+        chosen = d.kind.value.choose_implementations(self.implementations[d.type_])
+        if d.kind == DependencyKind.COLLECTIVE: #todo externalize to dep kind or smth
+            return [
+                self.lifecycles[i].target
+                for i in chosen
+            ]
+        return self.lifecycles[chosen].target
+
     def _inject_instance[T: type[Injectable]](self, t: T):
         instance: Injectable = self.lifecycles[t].target
         deps = self.dependencies[t]
         kwargs = {
-            d.name: d.kind.value.choose_implementations(self.implementations[t])
+            d.name: self._to_target(d)
             for d in deps
         }
         instance.inject_requirements(**kwargs)
@@ -111,8 +131,7 @@ class BasicContext(NamedTuple):
         try:
             lifecycles = []
             for t in self.requirements.order(self.cyclic_resolver):
-                instance = t()
-                lifecycle = self._make_lifecycle(instance)
+                lifecycle = self._make_lifecycle(t)
                 lifecycles.append(lifecycle)
                 self.lifecycles[t] = lifecycle
             with composite_lifecycle(lifecycles):

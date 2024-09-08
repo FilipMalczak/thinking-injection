@@ -69,11 +69,11 @@ def _guard_non_None[T](x: T) -> T:
 
 class DependencyKind(Enum):
     # todo rename to REQUIRED or PRIMARY?
-    SIMPLE = KindDefinition(EXACTLY_ONE, lambda details: set([_guard_non_None(details.primary)]), lambda t: True, lambda t: t)
+    SIMPLE = KindDefinition(EXACTLY_ONE, lambda details: _guard_non_None(details.primary), lambda t: True, lambda t: t)
 
     OPTIONAL = KindDefinition(
         ZERO_OR_ONE,
-        lambda details: set([details.primary]) if details.primary else set(),
+        lambda details: details.primary,
         lambda t: _nonthrowing_isinstance(None, t), # "type is optional" aka "None can be instance of this type"
         lambda t: _ensure_single_type(
             x
@@ -137,6 +137,12 @@ def get_dependencies(t: type) -> Dependencies | None:
     return result
 
 class DependencyGraph(GuardedDict[type, Dependencies]):
+    def __init__(self, data: dict[type, Dependencies]):
+        GuardedDict.__init__(self, data)
+
+    @property
+    def types(self) -> TypeSet:
+        return set(self.keys())
 
     def __guard__(self, k: type, v: Dependencies | None):
         assert isinstance(k, type)  # todo msgs
