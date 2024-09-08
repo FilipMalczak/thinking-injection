@@ -19,8 +19,8 @@ classifiers = [
 ]
 keywords = ["thinking", "dependency", "injection", "di"]
 dependencies = [
-    "recursive-import>=1.0.0",
-    "thinking-runtime"
+    "thinking-modules>=0.0.4",
+    "thinking-runtime>=0.0.3"
 ]
 requires-python = ">=3.12"
 
