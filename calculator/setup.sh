@@ -19,11 +19,11 @@ pip install build
 cd ..
 ./install_develop.sh
 
-python3 -m build
-
-artifact=$(ls ./dist | grep '.whl' | sort | tail -1)
-
-pip install "./dist/$artifact"
+#python3 -m build
+#
+#artifact=$(ls ./dist | grep '.whl' | sort | tail -1)
+#
+#pip install "./dist/$artifact"
 
 
 

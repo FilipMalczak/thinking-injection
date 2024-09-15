@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from contextlib import contextmanager
-from typing import NamedTuple, ContextManager, Callable, runtime_checkable, Protocol
+from typing import NamedTuple, ContextManager, Callable, runtime_checkable, Protocol, Iterable
 
 from thinking_injection.dependencies import DependencyGraph, Dependency, DependencyKind
 from thinking_injection.ordering import TypeComparator
-from thinking_injection.implementations import Implementations
+from thinking_injection.implementations import Implementations, ImplementationDetails
 from thinking_injection.injectable import Injectable
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
 from thinking_injection.requirements import RequirementsGraph
@@ -54,10 +54,23 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
 
 @runtime_checkable
 class Context(HasLifecycle, Protocol):
-    dependencies: DependencyGraph
-    implementations: Implementations
-    requirements: RequirementsGraph
-    lifecycles: dict[type, ObjectLifecycle]
+    # dependencies: DependencyGraph
+    # implementations: Implementations
+    # requirements: RequirementsGraph
+    # lifecycles: dict[type, ObjectLifecycle]
+
+    @abstractmethod
+    def dependencies[T: type](self, t: T) -> frozenset[Dependency]: pass
+
+    @abstractmethod
+    def implementation_details[T: type](self, t: T) -> ImplementationDetails: pass
+
+    @abstractmethod
+    def prerequisites[T: type](self, t: T) -> frozenset[type]: pass
+
+    @property
+    @abstractmethod
+    def types(self) -> Iterable[type]: pass
 
     @abstractmethod
     def instance[T](self, t: type[T]) -> T: pass
@@ -65,38 +78,15 @@ class Context(HasLifecycle, Protocol):
     @abstractmethod
     def instances[T](self, t: type[T]) -> frozenset[T]: pass
 
-#todo context itself cannot be injected just yet
 
-class BasicContext(NamedTuple):
-    requirements: RequirementsGraph
-    cyclic_resolver: TypeComparator
-    lifecycles: dict[type, ObjectLifecycle]
-
-    @property
-    def dependencies(self) -> DependencyGraph:
-        return self.requirements.dependencies
-
-    @property
-    def implementations(self) -> Implementations:
-        return self.requirements.implementations
-
-    @property
-    def scope(self) -> ContextScope:
-        return self.requirements.scope
-
-    #todo types property?
-
-    @classmethod
-    def build(cls, scope: ContextScope, cyclic_resolver: TypeComparator = None):
-        requirements = RequirementsGraph.build(scope)
-        lifecycles: dict[type, ObjectLifecycle] = {}
-        return cls(requirements, cyclic_resolver, lifecycles)
+class AbstractContext(Context):
+    _lifecycles: dict[type, ObjectLifecycle]
 
     def instance[T](self, t: type[T]) -> T:
-        return self.lifecycles[self.implementations[t].primary].target
+        return self._lifecycles[self.implementation_details(t).primary].target
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
-        return frozenset(self.lifecycles[x].target for x in self.implementations[t].implementations)
+        return frozenset(self._lifecycles[x].target for x in self.implementation_details(t).implementations)
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
         instance = t()
@@ -107,34 +97,55 @@ class BasicContext(NamedTuple):
         return ValueLifecycle(instance)
 
     def _to_target(self, d: Dependency):
-        chosen = d.kind.value.choose_implementations(self.implementations[d.type_])
+        chosen = d.kind.value.choose_implementations(self.implementation_details(d.type_))
         if d.kind == DependencyKind.COLLECTIVE: #todo externalize to dep kind or smth
             return [
-                self.lifecycles[i].target
+                self._lifecycles[i].target
                 for i in chosen
             ]
-        return self.lifecycles[chosen].target
+        return self._lifecycles[chosen].target
 
     def _inject_instance[T: type[Injectable]](self, t: T):
-        instance: Injectable = self.lifecycles[t].target
-        deps = self.dependencies[t]
+        instance: Injectable = self._lifecycles[t].target
+        deps = self.dependencies(t)
         kwargs = {
             d.name: self._to_target(d)
             for d in deps
         }
         instance.inject_requirements(**kwargs)
 
-
-
     @contextmanager
     def lifecycle(self) -> ContextManager:
         try:
             lifecycles = []
-            for t in self.requirements.order(self.cyclic_resolver):
+            for t in self.types:
                 lifecycle = self._make_lifecycle(t)
                 lifecycles.append(lifecycle)
-                self.lifecycles[t] = lifecycle
+                self._lifecycles[t] = lifecycle
             with composite_lifecycle(lifecycles):
                 yield
         finally:
-            self.lifecycles.clear()
+            self._lifecycles.clear()
+
+#todo context itself cannot be injected just yet
+
+
+class BasicContext(AbstractContext):
+
+    def __init__(self, scope: ContextScope, cyclic_resolver: TypeComparator = None):
+        self._requirements = RequirementsGraph.build(scope)
+        self._cyclic_resolver = cyclic_resolver
+        self._lifecycles: dict[type, ObjectLifecycle] = {}
+
+    def dependencies[T: type](self, t: T) -> frozenset[Dependency]:
+        return frozenset(self._requirements.dependencies[t])
+
+    def implementation_details[T: type](self, t: T) -> ImplementationDetails:
+        return self._requirements.implementations[t]
+
+    def prerequisites[T: type](self, t: T) -> frozenset[type]:
+        return frozenset(self._requirements[t])
+
+    @property
+    def types(self) -> Iterable[type]:
+        return self._requirements.order(self._cyclic_resolver)
