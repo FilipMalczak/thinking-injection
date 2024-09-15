@@ -4,7 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/thinking-injection.svg)](https://badge.fury.io/py/thinking-injection)
 [![codecov](https://codecov.io/github/FilipMalczak/thinking-injection/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/github/FilipMalczak/thinking-injection)
 
-> Part of [thinking](https://github.com/search?q=owner%3AFilipMalczak+thinking&type=repositories) family.
+> Part of [thinking](https://github.com/FilipMalczak/thinking-rationale) family.
 
 Pythonic DI for AI, as funny as it sounds.
 
