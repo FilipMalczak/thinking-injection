@@ -1,18 +1,6 @@
-import sys
 from logging import getLogger
 from pprint import pformat
 
-import deepdiff.helper
-
-
-def _eval_top_level_class(txt: str):
-
-    parts = txt.split(".")
-    mod = ".".join(parts[:-1])
-    name = parts[-1]
-    _mod = sys.modules[mod]
-    getattr(_mod, name)
-deepdiff.helper.LITERAL_EVAL_PRE_PROCESS.append(("<class ", '>', _eval_top_level_class))
 
 #todo move to thinking-tests
 def assert_fails(l):
