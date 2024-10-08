@@ -1,9 +1,9 @@
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from test.injection.class_fixtures import *
+from test.injection.fixtures.class_fixtures import *
 from test.util import assert_fails
-from thinking_injection.dependencies import unpack_dependency, DependencyKind, get_dependencies, Dependency
+from thinking_injection.common.dependencies import unpack_dependency, DependencyKind, get_dependencies, Dependency
 
 
 @case
@@ -30,17 +30,17 @@ def test_collective_unpacking():
 
 @case
 def test_values_have_no_deps():
-    assert get_dependencies(str) is None
-    assert get_dependencies(int) is None
-    assert get_dependencies(SimpleClass) is None
-    assert get_dependencies(ANamedTuple) is None
-    assert get_dependencies(ADataclass) is None
+    assert get_dependencies(str) == frozenset()
+    assert get_dependencies(int) == frozenset()
+    assert get_dependencies(SimpleClass) == frozenset()
+    assert get_dependencies(ANamedTuple) == frozenset()
+    assert get_dependencies(ADataclass) == frozenset()
 
 @case
 def test_initializables_have_no_deps():
-    assert get_dependencies(HasLifecycleDuckTyped) is None
-    assert get_dependencies(HasLifecycleInheriting) is None
-    assert get_dependencies(SimpleInitializable) is None
+    assert get_dependencies(HasLifecycleDuckTyped) == frozenset()
+    assert get_dependencies(HasLifecycleInheriting) == frozenset()
+    assert get_dependencies(SimpleInitializable) == frozenset()
 
 @case
 def test_simple_deps():

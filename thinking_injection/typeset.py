@@ -6,8 +6,10 @@ from thinking_modules.scan import scan
 
 from thinking_injection.discovery import DISCOVERED_TYPES
 
+#todo all typesets should be immutable, remove distinction or rename TypeSet to MutableTypeSet + remove Immutable prefix
 TypeSet = set[type]
 ImmutableTypeSet = frozenset[type]
+AnyTypeSet = TypeSet | ImmutableTypeSet
 
 TypeAliasing = dict[type, type]
 

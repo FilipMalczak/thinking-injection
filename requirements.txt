@@ -1,2 +1,5 @@
 thinking-modules>=0.0.4
 thinking-runtime>=0.0.3
+bidict>=0.23.1
+frozendict>=2.4.4
+type_intersections>=0.1.1

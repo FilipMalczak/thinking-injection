@@ -6,6 +6,7 @@ from thinking_tests.running.start import run_current_module
 
 from thinking_programming.serialization import SerializableMixin, PolymorphicSerializableMixin
 
+
 #fixme notably it fails tits over for namedtuples; gotta work on that and that why there are only dataclass tests
 #todo work
 

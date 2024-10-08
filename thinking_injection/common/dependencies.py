@@ -1,12 +1,12 @@
-from enum import Enum, auto
+from enum import Enum
 from inspect import getfullargspec
 from types import GenericAlias
-from typing import NamedTuple, Iterable, Self, Callable, Union, Optional, Protocol
+from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
 
-from thinking_injection.guardeddict import GuardedDict
-from thinking_injection.implementations import ImplementationDetails
 from thinking_injection.interfaces import AnyType
+from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.typeset import TypeSet
+
 
 class ImplementationArity(Protocol):
     def __call__(self, impl_count: int) -> bool:
@@ -99,7 +99,7 @@ class Dependency(NamedTuple):
     type_: type[AnyType]
     kind: DependencyKind
 
-Dependencies = set[Dependency]
+Dependencies = frozenset[Dependency]
 
 def unpack_dependency(t: type) -> tuple[type, DependencyKind]:
     for kind in [DependencyKind.OPTIONAL, DependencyKind.COLLECTIVE, DependencyKind.SIMPLE]:
@@ -108,15 +108,13 @@ def unpack_dependency(t: type) -> tuple[type, DependencyKind]:
     assert False #todo msg  no enum matched
 
 
-#todo make this a test
-
 def get_dependencies(t: type) -> Dependencies | None:
     try:
         inject_method = t.inject_requirements
     except AttributeError:
         #non-injectable types have no dependencies
         #todo replace with protocol check instead of duck-typing?
-        return None
+        return frozenset()
     spec = getfullargspec(inject_method)
     assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
     assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
@@ -134,37 +132,4 @@ def get_dependencies(t: type) -> Dependencies | None:
         if a in spec.annotations:
             t, kind = unpack_dependency(spec.annotations[a])
             result.add(Dependency(a, t, kind))
-    return result
-
-class DependencyGraph(GuardedDict[type, Dependencies]):
-    def __init__(self, data: dict[type, Dependencies]):
-        GuardedDict.__init__(self, data)
-
-    @property
-    def types(self) -> TypeSet:
-        return set(self.keys())
-
-    def __guard__(self, k: type, v: Dependencies | None):
-        assert isinstance(k, type)  # todo msgs
-        if v is not None:
-            assert isinstance(v, set)
-            for x in v:
-                assert isinstance(x, Dependency)
-
-    @classmethod
-    def build(cls, types: TypeSet) -> Self:
-        """
-        :param types - types to start scanning with; graph will be probably bigger than this
-        """
-        data = {}
-        def scan(t: type):
-            if t not in data:
-                deps = get_dependencies(t)
-                data[t] = deps
-                if deps:
-                    for d in deps:
-                        scan(d.type_)
-        for t in types:
-            scan(t)
-        return cls(data)
-
+    return frozenset(result)

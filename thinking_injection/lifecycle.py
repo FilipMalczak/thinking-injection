@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from contextlib import contextmanager, ExitStack
-
 from dataclasses import dataclass
 from logging import getLogger
-from typing import Callable, Iterable, TypeVar, Protocol, ContextManager, runtime_checkable
+from typing import Callable, Iterable, Protocol, ContextManager, runtime_checkable
+
+from type_intersections import Intersection
 
 log = getLogger(__name__)
 
@@ -14,10 +15,22 @@ class Resettable(Protocol):
 
 
 @runtime_checkable
-class HasLifecycle(Protocol):
+class HasLifecycle[T: ContextManager](Protocol):
     @abstractmethod
-    def lifecycle(self) -> ContextManager:
+    def lifecycle(self) -> T:
         yield
+
+
+class HasSnapshot[Snap](Protocol):
+    def snapshot(self) -> Snap: pass
+
+
+def snapshot_as_lifecycle[Snap, T: HasSnapshot](x: type[T]) -> type[Intersection[T, HasLifecycle[Snap]]]:
+    @contextmanager
+    def lifecycle(self) -> Snap:
+        yield self.snapshot
+    x.lifecycle = lifecycle
+    return x
 
 
 @runtime_checkable
