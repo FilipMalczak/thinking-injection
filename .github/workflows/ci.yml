@@ -34,6 +34,9 @@ jobs:
       - name: Run tests
         run: |
           python -m test.run_all
+          
+        
+      
 
       - name: Publish test report
         uses: dorny/test-reporter@v1
@@ -52,6 +55,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
+#todo upload test reports even in case of failure?
       - name: Upload XML test report
         uses: actions/upload-artifact@v4
         with:
