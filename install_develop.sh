@@ -1,4 +1,3 @@
-#!/usr/bin/zsh
 #This script will install requirements from thinking family from develop branch on GitHub if they aren't installed yet.
 # Should work with bash too, shebang is aligned with my machine (running Linux Mint).
 # Used mainly in CI.
