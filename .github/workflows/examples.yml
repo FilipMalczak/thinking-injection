@@ -1,4 +1,4 @@
-name: CI
+name: Example projects
 
 on: [push]
 
