@@ -2,6 +2,7 @@ from abc import abstractmethod
 from contextlib import contextmanager
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable
 
+from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.context.protocol import InstanceIndex, ApplicationContext
 from thinking_injection.common.dependencies import Dependency, DependencyKind
 from thinking_injection.injectable import Injectable
@@ -74,7 +75,7 @@ class SimpleIndex:#(ContextManager, Protocol):
     def _lifecyle_context_manager(self) -> ContextManager:
         try:
             lifecycles = []
-            for t in self.index.known_types:
+            for t in self.index.known_concrete_types():
                 lifecycle = self._make_lifecycle(t)
                 lifecycles.append(lifecycle)
                 self._lifecycles[t] = lifecycle
@@ -98,7 +99,8 @@ class SimpleIndex:#(ContextManager, Protocol):
         return ValueLifecycle(instance)
 
     def _to_target(self, d: Dependency):
-        chosen = d.kind.value.choose_implementations(self.implementation_details(d.type_))
+        details = ImplementationDetails(self.index.implementations(d.type_), self.index.primary_implementation(d.type_))
+        chosen = d.kind.value.choose_implementations(details)
         if d.kind == DependencyKind.COLLECTIVE: #todo externalize to dep kind or smth
             return [
                 self._lifecycles[i].target
@@ -108,7 +110,7 @@ class SimpleIndex:#(ContextManager, Protocol):
 
     def _inject_instance[T: type[Injectable]](self, t: T):
         instance: Injectable = self._lifecycles[t].target
-        deps = self.dependencies(t)
+        deps = self.index.dependencies(t)
         kwargs = {
             d.name: self._to_target(d)
             for d in deps
@@ -122,10 +124,8 @@ assert issubclass(SimpleIndex, InstanceIndex)
 class SimpleContext(ApplicationContext[SimpleIndex], TypeRegistryDelegateMixin): #[ContextLifetime: InstanceIndex](TypeRegistry, HasLifecycle[ContextLifetime], Protocol): pass
     def __init__(self, typeset: AnyTypeSet, cyclic_resolver: TypeComparator = None):
         self.typeset = freeze(typeset)
-        self.registry = SimpleRegistry()
-        self.registry.register(typeset)
+        self.registry = SimpleRegistry.make(typeset)
         self._cyclic_resolver = cyclic_resolver
 
-    @contextmanager
     def lifecycle(self) -> SimpleIndex:
         return SimpleIndex(self.registry.snapshot())

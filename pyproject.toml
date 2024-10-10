@@ -20,7 +20,10 @@ classifiers = [
 keywords = ["thinking", "dependency", "injection", "di"]
 dependencies = [
     "thinking-modules>=0.0.4",
-    "thinking-runtime>=0.0.3"
+    "thinking-runtime>=0.0.3",
+    "bidict>=0.23.1",
+    "frozendict>=2.4.4",
+    "type_intersections>=0.1.1"
 ]
 requires-python = ">=3.12"
 
@@ -28,4 +31,11 @@ requires-python = ">=3.12"
 Homepage = "https://github.com/FilipMalczak/thinking-injection"
 
 [tool.setuptools]
-packages = ["thinking_injection", "thinking_programming"]
+#todo keep this up to date!!!
+packages = [
+    "thinking_injection",
+    "thinking_injection.common",
+    "thinking_injection.registry",
+    "thinking_injection.context",
+    "thinking_programming"
+]
