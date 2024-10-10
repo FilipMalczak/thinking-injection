@@ -1,4 +1,4 @@
-#set -x
+set -x
 #set -e
 
 #./setup.sh >/dev/null 2>/dev/null
