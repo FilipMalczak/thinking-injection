@@ -17,6 +17,7 @@ assert_equals(){
   if [ "$1" != "$2" ]; then
     echo "Expected $1"
     echo "Got $2"
+    echo "Exiting with 1"
     exit 1
   else
     echo "Match: $1"
@@ -25,7 +26,7 @@ assert_equals(){
 }
 
 run(){
-  python -m app ${@:1} 2>./log.txt
+  python -m app $1 2>./log.txt
   result=$?
   if [ $result -gt 0 ]; then
     cat ./log.txt
@@ -36,12 +37,12 @@ run(){
 }
 
 test_case(){
-  txt=$(run ${@:2})
+  txt=$(run "$2")
   assert_success $?
   assert_equals "$1" "$txt"
 }
 
-test_case '(Value(2.0) + Value(3.0)) = 5.0' 2 3 +
-test_case '(((Value(1.0) + Value(2.0)) * Value(4.0)) - Value(5.0)) = 7.0'
-test_case '((((Value(-8.0) + Value(6.0)) * Value(-5.0)) - Value(4.0)) / Value(3.0)) = 2.0' -8 6 + -5 '*' 4 - 3 /
+test_case '(Value(2.0) + Value(3.0)) = 5.0' "2 3 +"
+test_case '(((Value(1.0) + Value(2.0)) x Value(4.0)) - Value(5.0)) = 7.0' ""
+test_case '((((Value(-8.0) + Value(6.0)) x Value(-5.0)) - Value(4.0)) / Value(3.0)) = 2.0' "-8 6 + -5 x 4 - 3 /"
 

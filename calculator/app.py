@@ -13,5 +13,5 @@ if __name__=="__main__":
     ctx = SimpleContext(from_package("calc"))
     with ctx.lifecycle() as index:
         parser = index.instance(RPNParser)
-        expr = parser.parse(sys.argv[1:] or "1 2 + 4 * 5 -".split())
+        expr = parser.parse(sys.argv[1:] or "1 2 + 4 x 5 -".split())
         print(expr, "=", expr.evaluate())
