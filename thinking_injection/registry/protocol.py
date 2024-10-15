@@ -1,6 +1,8 @@
+from contextlib import contextmanager
 from functools import cmp_to_key
 from typing import Protocol, runtime_checkable, Optional, Self, Iterable, NamedTuple
 
+from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies
 from thinking_injection.interfaces import ConcreteType, is_concrete
 from thinking_injection.lifecycle import HasLifecycle
@@ -63,9 +65,18 @@ class TypeIndex(Protocol):
 
 
 @runtime_checkable
-class TypeRegistry(HasLifecycle, Protocol):
+class TypeRegistry(HasLifecycle, Cloneable, Protocol):
     def register(self, *t: Collectable[type]) -> DiscoveredTypes: pass
 
+    def remove(self, *t: Collectable[type]):
+        '''raises UnknownTypesException'''
+
+
+    #todo make this a property across the implementations
     def known_types(self) -> ImmutableTypeSet: pass
 
-    def snapshot(self) -> TypeIndex: pass
+    def type_index(self) -> TypeIndex: pass
+
+    @contextmanager
+    def lifecycle(self) -> TypeIndex:
+        yield self.type_index()

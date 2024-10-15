@@ -21,16 +21,18 @@ class HasLifecycle[T: ContextManager](Protocol):
         yield
 
 
-class HasSnapshot[Snap](Protocol):
-    def snapshot(self) -> Snap: pass
+#todo
+# class HasSnapshot[Snap](Protocol):
+#     def snapshot(self) -> Snap: pass
 
+#todo
 
-def snapshot_as_lifecycle[Snap, T: HasSnapshot](x: type[T]) -> type[Intersection[T, HasLifecycle[Snap]]]:
-    @contextmanager
-    def lifecycle(self) -> Snap:
-        yield self.snapshot
-    x.lifecycle = lifecycle
-    return x
+# def snapshot_as_lifecycle[Snap, T: HasSnapshot](x: type[T]) -> type[Intersection[T, HasLifecycle[Snap]]]:
+#     @contextmanager
+#     def lifecycle(self) -> Snap:
+#         yield self.type_index
+#     x.lifecycle = lifecycle
+#     return x
 
 
 @runtime_checkable
