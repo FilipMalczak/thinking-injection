@@ -102,7 +102,9 @@ class ForcedPrimaryImplementations(ContextConfigurator):
         forced = self.forced()
         assert forced  # todo msg; assert is type mapping
         for t, impl in forced.items():
-            customizer.implementations[t].primary = impl
+            impls = customizer.implementations[t]
+            assert impl in impls.all #todo ditto as w/ defaults
+            impls.primary = impl
 
     def inject_requirements(self, phase: ForcingPrimaries):
         self._phase = phase

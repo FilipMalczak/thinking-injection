@@ -3,7 +3,8 @@ from typing import Protocol, Optional
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_injection.context.configurable.configurator import FallbacksProvider, DefaultPrimaryImplementations
+from thinking_injection.context.configurable.configurator import FallbacksProvider, DefaultPrimaryImplementations, \
+    ForcedPrimaryImplementations
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.context.protocol import InstanceIndex
 from thinking_injection.interfaces import interface, ConcreteType
@@ -75,6 +76,8 @@ def test_fallback_ignored_w_multiple_impls():
     with ctx.lifecycle() as index:
         assert_context(index, Proto, None, {Impl2, Impl3})
 
+#todo what if fallback doesn't register as impl?
+
 class DefaultForProto(DefaultPrimaryImplementations):
     def primaries(self) -> dict[type, ConcreteType]:
         return {
@@ -107,6 +110,73 @@ def test_default_cannot_register_new_types():
     assert exc is not None
 
 # no point in testing fallback + default - they work in separate situations
+
+class ProtoForcer(ForcedPrimaryImplementations):
+    def forced(self) -> dict[type, ConcreteType]:
+        return {
+            Proto: Impl1
+        }
+
+
+@case
+def test_forcing_given_single_impl():
+    ctx = ConfigurableContext([Proto, Impl1, ProtoForcer])
+    with ctx.lifecycle() as index:
+        assert_context(index, Proto, Impl1, {Impl1})
+
+@case
+def test_forcing_given_multiple_impls():
+    ctx = ConfigurableContext([Proto, Impl1, Impl2, ProtoForcer])
+    with ctx.lifecycle() as index:
+        assert_context(index, Proto, Impl1, {Impl1, Impl2})
+
+@case
+def test_forcing_given_single_impl_and_fallback():
+    ctx = ConfigurableContext([Proto, FallbackForProto, ProtoForcer])
+    with ctx.lifecycle() as index:
+        assert_context(index, Proto, Impl1, {Impl1})
+
+
+@case
+def test_forcing_cannot_register_types_given_no_impls():
+    ctx = ConfigurableContext([Proto, ProtoForcer])
+    reached = False
+    exc = None
+    try:
+        with ctx.lifecycle() as index:
+            reached = True
+    except BaseException as e:
+        exc = e
+    assert not reached
+    assert exc is not None
+
+@case
+def test_forcing_cannot_register_types_given_single_impl():
+    ctx = ConfigurableContext([Proto, Impl2, ProtoForcer])
+    reached = False
+    exc = None
+    try:
+        with ctx.lifecycle() as index:
+            reached = True
+    except BaseException as e:
+        exc = e
+    assert not reached
+    assert exc is not None
+
+
+@case
+def test_forcing_cannot_register_types_given_multiple_impl():
+    ctx = ConfigurableContext([Proto, Impl2, Impl3, ProtoForcer])
+    reached = False
+    exc = None
+    try:
+        with ctx.lifecycle() as index:
+            reached = True
+    except BaseException as e:
+        exc = e
+    assert not reached
+    assert exc is not None
+
 
 if __name__=="__main__":
     run_current_module()
