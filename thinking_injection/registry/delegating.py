@@ -13,7 +13,8 @@ class TypeRegistryDelegateMixin:
     registry: TypeRegistry
 
     def register(self, *t: Collectable[type]) -> DiscoveredTypes:
-        return self.registry.register(*t)
+        result = self.registry.register(*t)
+        return result
 
     def remove(self, *t: Collectable[type]):
         self.registry.remove(*t)

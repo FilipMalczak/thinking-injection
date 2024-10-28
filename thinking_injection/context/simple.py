@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from contextlib import contextmanager
+from logging import getLogger
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
 
 from thinking_injection.cloneable import Cloneable
@@ -9,12 +10,14 @@ from thinking_injection.common.dependencies import Dependency, DependencyKind
 from thinking_injection.injectable import Injectable
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
 from thinking_injection.ordering import TypeComparator
+from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
 from thinking_injection.registry.delegating import TypeRegistryDelegateMixin
 from thinking_injection.registry.protocol import TypeIndex, TypeRegistry
 from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import AnyTypeSet
 from thinking_programming.collectable import Collectable
 
+log = getLogger(__name__)
 
 @runtime_checkable
 class ObjectLifecycle[T](Protocol):
@@ -87,17 +90,24 @@ class SimpleIndex(InstanceIndex):
             self._lifecycles.clear()
 
     def instance[T](self, t: type[T]) -> T:
-        return self._lifecycles[self.index.primary_implementation(t)].target
+        primary_type = self.index.primary_implementation(t)
+        if primary_type is None:
+            return None
+        return self._lifecycles[primary_type].target
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
+        log.info(f"MAKE LIFECYCLE {t}")
         instance = t()
         if issubclass(t, Injectable):
+            log.info("is injectable")
             return InitializableLifecycle(instance, lambda: self._inject_instance(t))
         if issubclass(t, HasLifecycle):
+            log.info("has lifecycle")
             return LifecycleDelegator(instance)
+        log.info("is value")
         return ValueLifecycle(instance)
 
     def _to_target(self, d: Dependency):
@@ -120,9 +130,9 @@ class SimpleIndex(InstanceIndex):
         instance.inject_requirements(**kwargs)
 
 
-class SimpleContext(ApplicationContext[SimpleIndex], TypeRegistryDelegateMixin):
+class SimpleContext(TypeRegistryDelegateMixin, ApplicationContext[SimpleIndex]):
     def __init__(self, typeset: AnyTypeSet = None, cyclic_resolver: TypeComparator = None):
-        self.registry: TypeRegistry = SimpleRegistry(typeset or [])
+        self.registry: CustomizableTypeRegistry = SimpleRegistry(typeset or [])
         self._cyclic_resolver = cyclic_resolver
 
     def lifecycle(self) -> SimpleIndex:
@@ -136,3 +146,4 @@ class SimpleContext(ApplicationContext[SimpleIndex], TypeRegistryDelegateMixin):
         out.registry = self.registry.clone()
         resolver = self._cyclic_resolver.clone() if isinstance(self._cyclic_resolver, Cloneable) else self._cyclic_resolver
         out._cyclic_resolver = resolver
+        return out

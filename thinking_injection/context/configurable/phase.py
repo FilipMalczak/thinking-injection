@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Protocol, Self, NamedTuple
 
 from thinking_injection.discovery import discover
@@ -6,23 +7,27 @@ from thinking_injection.interfaces import interface
 
 
 @interface
-class ConfigurationPhase(Injectable, Protocol):
+class ConfigurationPhase(Injectable, ABC):
     @property
+    @abstractmethod
     def name(self) -> str: pass
 
 
 
 @discover
 class AddingFallbackImpls(ConfigurationPhase):
+    def __init__(self): pass
+
     @property
     def name(self) -> str:
         return "fallbacks"
 
     def inject_requirements(self): pass
 
-
 @discover
-class SettingDefaultPrimaries:
+class SettingDefaultPrimaries(ConfigurationPhase):
+    def __init__(self): pass
+
     @property
     def name(self) -> str:
         return "defaults"
@@ -31,7 +36,9 @@ class SettingDefaultPrimaries:
 
 
 @discover
-class ForcingPrimaries:
+class ForcingPrimaries(ConfigurationPhase):
+    def __init__(self): pass
+
     @property
     def name(self) -> str:
         return "forcing"

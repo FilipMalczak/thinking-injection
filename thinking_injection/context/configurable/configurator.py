@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Protocol, Callable
 
+from thinking_injection.injectable import Injectable
 from thinking_injection.interfaces import interface, ConcreteType
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls, \
@@ -8,10 +9,12 @@ from thinking_injection.context.configurable.phase import ConfigurationPhase, Ad
 
 
 @interface
-class ContextConfigurator(Protocol):
+class ContextConfigurator(Injectable, Protocol):
     #name is a mouthful, but since its a protocol, we don't want simple configure() (that can be used in other context)
     # to clash with this
     def configure_context(self, customizer: TypeRegistryCustomizer): pass
+
+    def inject_requirements(self) -> None: pass
 
     def phase(self) -> ConfigurationPhase: pass
 
@@ -31,7 +34,7 @@ def specialized_configurator[T: type[ContextConfigurator]](p: type[Configuration
 def declares_allowed_phase(configurator: ContextConfigurator) -> bool:
     for c, p in SPECIALIZED_CONFIGURATOR_PHASES.items():
         if isinstance(configurator, c):
-            if configurator.phase() != p:
+            if not isinstance(configurator.phase(), p):
                 return False
     return True
 
@@ -40,7 +43,7 @@ def declares_allowed_phase(configurator: ContextConfigurator) -> bool:
 
 @interface
 @specialized_configurator(AddingFallbackImpls)
-class FallbacksProvider(ABC):
+class FallbacksProvider(ContextConfigurator):
     def __init__(self):
         self._phase: AddingFallbackImpls = None
 
@@ -63,7 +66,7 @@ class FallbacksProvider(ABC):
 
 @interface
 @specialized_configurator(SettingDefaultPrimaries)
-class DefaultPrimaryImplementations(ABC):
+class DefaultPrimaryImplementations(ContextConfigurator):
     def __init__(self):
         self._phase: SettingDefaultPrimaries = None
 
@@ -87,7 +90,7 @@ class DefaultPrimaryImplementations(ABC):
 
 @interface
 @specialized_configurator(ForcingPrimaries)
-class ForcedPrimaryImplementations(ABC):
+class ForcedPrimaryImplementations(ContextConfigurator):
     def __init__(self):
         self._phase: ForcingPrimaries = None
 

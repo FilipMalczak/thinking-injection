@@ -25,7 +25,8 @@ class ImplementationsCustomizer(Protocol):
         Should raise UnknownTypeException
         """
 
-    __getitem__ = of
+    def __getitem__(self, item):
+        return self.of(item)
 
 
 @runtime_checkable

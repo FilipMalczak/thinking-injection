@@ -1,8 +1,12 @@
 from collections import defaultdict
 from contextlib import contextmanager
+from logging import getLogger
 from typing import Optional
 
+from thinking_modules.model import ModuleName
+
 from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase
+from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
@@ -11,9 +15,11 @@ from thinking_injection.context.protocol import ApplicationContext, InstanceInde
 from thinking_injection.context.simple import SimpleContext
 from thinking_injection.registry.delegating import TypeIndexUnion
 from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex
-from thinking_injection.typeset import ImmutableTypeSet
+from thinking_injection.typeset import ImmutableTypeSet, AnyTypeSet, from_package
 
 from thinking_programming.collectable import Collectable, collect
+
+log = getLogger(__name__)
 
 CONFIGURATION_TYPES = frozenset({
     ConfigurationPhase,
@@ -23,15 +29,14 @@ CONFIGURATION_TYPES = frozenset({
 def is_configuration_item[T: type](t: T) -> bool:
     return issubclass(t, tuple(CONFIGURATION_TYPES))
 
-class CustomizedIndex(InstanceIndex):
-    def __init__(self, configurators_context: ApplicationContext, businesss_context: SimpleContext):
+class ConfiguredIndex(InstanceIndex):
+    def __init__(self, configurators_context: ApplicationContext, business_context: SimpleContext):
         self.configurators_context = configurators_context
-        self.business_context = businesss_context
+        self.business_context = business_context
         self._raw_manager = self._both_contexts_lifecycle_manager()
         self.configurators_index: InstanceIndex = None
         self.business_index: InstanceIndex = None
 
-    #TODO
     def instance[T](self, t: type[T]) -> Optional[T]:
         index = self.configurators_index if is_configuration_item(t) else self.business_index
         return index.instance(t)
@@ -54,7 +59,7 @@ class CustomizedIndex(InstanceIndex):
                     assert isinstance(instance, ContextConfigurator)
                     assert declares_allowed_phase(instance)
                     configurator_per_phase[instance.phase()].add(instance)
-            customizer = self.business_context.customizer()
+            customizer = self.business_context.registry.customizer()
             for phase in ordered_phases:
                 for configurator in configurator_per_phase[phase]:
                     configurator.configure_context(customizer)
@@ -62,26 +67,28 @@ class CustomizedIndex(InstanceIndex):
                 self.business_index = business_index
                 yield
 
-    #//todo
-
     def __enter__(self):
-        return self._raw_manager.__enter__()
+        self._raw_manager.__enter__()
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         result = self._raw_manager.__exit__(exc_type, exc_value, traceback)
         return result
 
 
-class CustomizableContext(ApplicationContext[CustomizedIndex]):
-    def __init__(self):
-        self.configurators_context = SimpleContext()
-        self.business_context = SimpleContext()
+class ConfigurableContext(ApplicationContext[ConfiguredIndex]):
+    def __init__(self, typeset: AnyTypeSet = None, cyclic_resolver: TypeComparator = None):
+        default_configurators_typeset = from_package(ModuleName.of(__name__).parent)
+        self.configurators_context = SimpleContext(default_configurators_typeset, cyclic_resolver=cyclic_resolver)
+        self.business_context = SimpleContext(cyclic_resolver=cyclic_resolver)
+        self.register(typeset)
 
     def register(self, *t: Collectable[type]) -> DiscoveredTypes:
         out = set()
         for x in collect(type, *t):
             ctx = self.configurators_context if is_configuration_item(x) else self.business_context
-            out.update(ctx.register(x))
+            result = ctx.register(x)
+            out.update(result)
         return frozenset(out)
 
     def remove(self, *t: Collectable[type]):
@@ -108,5 +115,5 @@ class CustomizableContext(ApplicationContext[CustomizedIndex]):
     def type_index(self) -> TypeIndex:
         return TypeIndexUnion([self.configurators_context, self.business_context])
 
-    def lifecycle(self) -> CustomizedIndex:
-        return CustomizedIndex(self.configurators_context.clone(), self.business_context.clone())
+    def lifecycle(self) -> ConfiguredIndex:
+        return ConfiguredIndex(self.configurators_context.clone(), self.business_context.clone())

@@ -30,7 +30,7 @@ class TypeDescriptor(NamedTuple):
 
     def without(self, ts: set[type]) -> Self:
         return TypeDescriptor(
-            frozenset(x for x in self.dependencies if x not in ts),
+            frozenset(x for x in self.dependencies if x.type_ not in ts),
             frozenset(x for x in self.implementations if x not in ts),
             self.primary if self.primary not in ts else None
         )
