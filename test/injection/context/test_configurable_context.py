@@ -3,7 +3,7 @@ from typing import Protocol, Optional
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_injection.context.configurable.configurator import FallbacksProvider
+from thinking_injection.context.configurable.configurator import FallbacksProvider, DefaultPrimaryImplementations
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.context.protocol import InstanceIndex
 from thinking_injection.interfaces import interface, ConcreteType
@@ -75,7 +75,38 @@ def test_fallback_ignored_w_multiple_impls():
     with ctx.lifecycle() as index:
         assert_context(index, Proto, None, {Impl2, Impl3})
 
+class DefaultForProto(DefaultPrimaryImplementations):
+    def primaries(self) -> dict[type, ConcreteType]:
+        return {
+            Proto: Impl1
+        }
+
+@case
+def test_default_ignored_when_primary_present():
+    ctx = ConfigurableContext([Proto, Impl2, DefaultForProto])
+    with ctx.lifecycle() as index:
+        assert_context(index, Proto, Impl2, {Impl2})
+
+@case
+def test_default_applied_when_primary_unknown():
+    ctx = ConfigurableContext([Proto, Impl1, Impl2, DefaultForProto])
+    with ctx.lifecycle() as index:
+        assert_context(index, Proto, Impl1, {Impl1, Impl2})
+
+@case
+def test_default_cannot_register_new_types():
+    ctx = ConfigurableContext([Proto, Impl2, Impl3, DefaultForProto])
+    reached = False
+    exc = None
+    try:
+        with ctx.lifecycle() as index:
+            reached = True
+    except BaseException as e:
+        exc = e
+    assert not reached
+    assert exc is not None
+
+# no point in testing fallback + default - they work in separate situations
+
 if __name__=="__main__":
-    # test_empty_context()
     run_current_module()
-    # test_fallback_works_when_no_impl()

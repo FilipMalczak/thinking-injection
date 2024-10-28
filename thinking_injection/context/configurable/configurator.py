@@ -79,6 +79,7 @@ class DefaultPrimaryImplementations(ContextConfigurator):
         for t, impl in primaries.items():
             impls = customizer.implementations[t]
             if impls.primary is None and len(impls.all) > 1:
+                assert impl in impls.all #todo msg; there's a test for this, remember when you're creating dedicated exceptions
                 customizer.implementations[t].primary = impl
 
     def inject_requirements(self, phase: SettingDefaultPrimaries):
