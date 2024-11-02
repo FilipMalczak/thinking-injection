@@ -9,13 +9,13 @@ from thinking_injection.context.configurable.phase import ConfigurationPhase, Ad
 
 
 @interface
-class ContextConfigurator(Injectable, Protocol):
+class ContextConfigurator(Injectable, ABC):
     #name is a mouthful, but since its a protocol, we don't want simple configure() (that can be used in other context)
     # to clash with this
+    @abstractmethod
     def configure_context(self, customizer: TypeRegistryCustomizer): pass
 
-    def inject_requirements(self) -> None: pass
-
+    @abstractmethod
     def phase(self) -> ConfigurationPhase: pass
 
 
@@ -111,3 +111,5 @@ class ForcedPrimaryImplementations(ContextConfigurator):
 
     def phase(self) -> ConfigurationPhase:
         return self._phase
+
+#todo tests that check that fallbacks/defaults/forced return sane values

@@ -12,6 +12,8 @@ class InstanceIndex(ContextManager, Protocol):
 
     def instances[T](self, t: type[T]) -> frozenset[T]: pass
 
+    def type_index(self) -> TypeIndex: pass
+
 
 
 @runtime_checkable

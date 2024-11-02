@@ -12,6 +12,12 @@ class ConfigurationPhase(Injectable, ABC):
     @abstractmethod
     def name(self) -> str: pass
 
+    def __str__(self):
+        return type(self).__name__
+
+    def __repr__(self):
+        return f"ConfigurationPhase[{type(self).__name__}]"
+
 
 
 @discover

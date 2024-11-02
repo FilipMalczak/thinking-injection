@@ -1,6 +1,9 @@
 from contextlib import contextmanager
+from enum import Enum, auto
 from functools import cmp_to_key
 from typing import Protocol, runtime_checkable, Optional, Self, Iterable, NamedTuple
+
+from pydot import Dot
 
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies
@@ -44,6 +47,11 @@ class TypeIndexMixin:
             yield from remainder.order(cyclic_resolver)
 
 
+#fixme not the best way, not the best placement
+class GraphEdge(Enum):
+    IMPLEMENTS = "implements"
+    DEPENDS_ON = "depends on"
+    REQUIRES = "requires"
 
 
 
@@ -68,6 +76,8 @@ class TypeIndex(Protocol):
 
     def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]: pass
 
+    # todo untested
+    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot: pass
 
 
 @runtime_checkable

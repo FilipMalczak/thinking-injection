@@ -17,8 +17,6 @@ from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import AnyTypeSet
 from thinking_programming.collectable import Collectable
 
-log = getLogger(__name__)
-
 @runtime_checkable
 class ObjectLifecycle[T](Protocol):
     target: T
@@ -64,7 +62,7 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
 class SimpleIndex(InstanceIndex):
     def __init__(self, index: TypeIndex):
         assert index is not None #todo msg
-        self.index = index
+        self.index = index #todo make private
         self._lifecycles = {}
         self._raw_manager = self._lifecyle_context_manager()
 
@@ -99,15 +97,11 @@ class SimpleIndex(InstanceIndex):
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
-        log.info(f"MAKE LIFECYCLE {t}")
         instance = t()
         if issubclass(t, Injectable):
-            log.info("is injectable")
             return InitializableLifecycle(instance, lambda: self._inject_instance(t))
         if issubclass(t, HasLifecycle):
-            log.info("has lifecycle")
             return LifecycleDelegator(instance)
-        log.info("is value")
         return ValueLifecycle(instance)
 
     def _to_target(self, d: Dependency):
@@ -128,6 +122,9 @@ class SimpleIndex(InstanceIndex):
             for d in deps
         }
         instance.inject_requirements(**kwargs)
+
+    def type_index(self) -> TypeIndex:
+        return self.index
 
 
 class SimpleContext(TypeRegistryDelegateMixin, ApplicationContext[SimpleIndex]):

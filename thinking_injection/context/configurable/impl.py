@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from logging import getLogger
 from typing import Optional
 
+from pydot import Dot
 from thinking_modules.model import ModuleName
 
 from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase
@@ -14,7 +15,7 @@ from thinking_injection.context.configurable.phase import ConfigurationPhase
 from thinking_injection.context.protocol import ApplicationContext, InstanceIndex
 from thinking_injection.context.simple import SimpleContext
 from thinking_injection.registry.delegating import TypeIndexUnion
-from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex
+from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet, AnyTypeSet, from_package
 
 from thinking_programming.collectable import Collectable, collect
@@ -50,7 +51,7 @@ class ConfiguredIndex(InstanceIndex):
         with self.configurators_context.lifecycle() as config_index:
             self.configurators_index = config_index
             ordered_phases: list[ConfigurationPhase] = []
-            configurator_per_phase: dict[ConfigurationPhase, set[ContextConfigurator]] = defaultdict(set)
+            configurator_per_phase: dict[ConfigurationPhase, list[ContextConfigurator]] = defaultdict(list)
             for ct in self.configurators_context.type_index().order():
                 instance = config_index.instance(ct)
                 if isinstance(instance, ConfigurationPhase):
@@ -58,10 +59,15 @@ class ConfiguredIndex(InstanceIndex):
                 else:
                     assert isinstance(instance, ContextConfigurator)
                     assert declares_allowed_phase(instance)
-                    configurator_per_phase[instance.phase()].add(instance)
+                    configurator_per_phase[instance.phase()].append(instance)
+            log.info(f"Ordered phases: {ordered_phases}")
+            log.info("Customizers per phase:")
+            for k, v in configurator_per_phase.items():
+                log.info(f"{k}: {v}")
             customizer = self.business_context.registry.customizer()
             for phase in ordered_phases:
                 for configurator in configurator_per_phase[phase]:
+                    log.info(f"Running {configurator}")
                     configurator.configure_context(customizer)
             with self.business_context.lifecycle() as business_index:
                 self.business_index = business_index
@@ -74,6 +80,9 @@ class ConfiguredIndex(InstanceIndex):
     def __exit__(self, exc_type, exc_value, traceback):
         result = self._raw_manager.__exit__(exc_type, exc_value, traceback)
         return result
+
+    def type_index(self) -> TypeIndex:
+        return TypeIndexUnion([self.configurators_index.type_index(), self.business_index.type_index()], ["configuration", "business"])
 
 
 class ConfigurableContext(ApplicationContext[ConfiguredIndex]):

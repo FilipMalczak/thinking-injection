@@ -1,9 +1,11 @@
+from cProfile import label
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cache
 from typing import NamedTuple, Optional, Self, Callable, Iterable
 
 from frozendict import frozendict
+from pydot import Dot, Node, Edge
 
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
@@ -16,7 +18,7 @@ from thinking_injection.registry.customizable.customizer import TypeRegistryCust
     TypeImplementationsCustomizer
 from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
 from thinking_injection.registry.protocol import TypeIndex, Implementations, Prerequisites, DiscoveredTypes, \
-    TypeIndexMixin
+    TypeIndexMixin, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable, collect
 
@@ -128,6 +130,46 @@ class SimpleIndex(NamedTuple):
         d = d or {}
         return SimpleIndex(frozendict(d))
 
+    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot:
+        if edges is None:
+            edges = set(GraphEdge)
+        result = Dot(graph_name=name, graph_type="digraph", suppress_disconnected=True)
+        for k in self.data.keys():
+            result.add_node(Node(k.__name__, shape="box" if is_concrete(k) else "diamond"))
+        for k in self.data.keys():
+            if GraphEdge.IMPLEMENTS in edges:
+                primary = self.primary_implementation(k)
+                for i in self.implementations(k):
+                    result.add_edge(
+                        Edge(
+                            i.__name__, k.__name__,
+                            style="bold" if i == primary else "solid",
+                            label=GraphEdge.IMPLEMENTS.value,
+                            arrowhead="empty"
+                        )
+                    )
+            if GraphEdge.DEPENDS_ON in edges:
+                for d in self.dependencies(k):
+                    result.add_edge(
+                        Edge(
+                            k.__name__, d.type_.__name__,
+                            label=GraphEdge.DEPENDS_ON.value,
+                            arrowhead="open",
+                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ( "*" if d.kind == DependencyKind.COLLECTIVE else "" )
+                        )
+                    )
+            if GraphEdge.REQUIRES in edges:
+                for r in self.prerequisites(k):
+                    result.add_edge(
+                        Edge(
+                            k.__name__, r.__name__,
+                            label=GraphEdge.REQUIRES.value,
+                            style="dashed",
+                            arrowhead="open"
+                        )
+                    )
+        return result
+
 
 assert issubclass(SimpleIndex, TypeIndex)
 
@@ -177,7 +219,6 @@ class SimpleTypeRegistryCustomizer(TypeRegistryCustomizer):
     @property
     def implementations(self) -> ImplementationsCustomizer:
         return SimpleImplementationsCustomizer(self._registry)
-
 
 
 # @snapshot_as_lifecycle #todo
@@ -258,5 +299,6 @@ class SimpleRegistry(CustomizableTypeRegistry):
 
     def clone(self) -> Self:
         return SimpleRegistry({k: v.clone() for k, v in self.data.items()})
+
 
 assert issubclass(SimpleRegistry, CustomizableTypeRegistry)
