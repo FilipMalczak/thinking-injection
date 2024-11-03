@@ -19,20 +19,6 @@ class HasLifecycle[T: ContextManager](Protocol):
         yield
 
 
-#todo
-# class HasSnapshot[Snap](Protocol):
-#     def snapshot(self) -> Snap: pass
-
-#todo
-
-# def snapshot_as_lifecycle[Snap, T: HasSnapshot](x: type[T]) -> type[Intersection[T, HasLifecycle[Snap]]]:
-#     @contextmanager
-#     def lifecycle(self) -> Snap:
-#         yield self.type_index
-#     x.lifecycle = lifecycle
-#     return x
-
-
 @runtime_checkable
 class Initializable(HasLifecycle, Protocol):
     def initialize(self) -> None: pass
@@ -81,33 +67,3 @@ def composite_lifecycle(delegates: Iterable[HasLifecycle]) -> ContextManager:
         for d in delegates:
             stack.enter_context(d.lifecycle())
         yield
-
-
-@dataclass
-class ReentrantLifecycleProxy[T: HasLifecycle](HasLifecycle):
-    delegate: T
-    already_entered: bool = False
-
-    @contextmanager
-    def lifecycle(self) -> ContextManager:
-        if self.already_entered:
-            yield
-        else:
-            #this is probably an overkill, but if python loses GIL, we may be already in luck
-            prev_entered = self.already_entered
-            try:
-                self.already_entered = True
-                with self.delegate.lifecycle():
-                    yield
-            finally:
-                self.already_entered = prev_entered
-
-    def __getattr__(self, item):
-        return getattr(self.delegate, item)
-
-    def __setattr__(self, key, value):
-        return setattr(self.delegate, key, value)
-
-
-def reentrant_proxy[T](delegate: T) -> T:
-    return ReentrantLifecycleProxy(delegate)

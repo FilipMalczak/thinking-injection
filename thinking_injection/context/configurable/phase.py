@@ -18,7 +18,6 @@ class ConfigurationPhase(Injectable, ABC):
         return f"ConfigurationPhase[{type(self).__name__}]"
 
 
-
 @discover
 class AddingFallbackImpls(ConfigurationPhase):
     def __init__(self): pass
@@ -28,6 +27,7 @@ class AddingFallbackImpls(ConfigurationPhase):
         return "fallbacks"
 
     def inject_requirements(self): pass
+
 
 @discover
 class SettingDefaultPrimaries(ConfigurationPhase):

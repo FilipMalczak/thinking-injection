@@ -4,6 +4,7 @@ from bidict import bidict
 
 DISCOVERED_TYPES = set()
 
+
 def discover[T: type](t: T) -> T:
     assert isinstance(t, type), "Can only discover concrete types, generics are disallowed" #todo better msg
     DISCOVERED_TYPES.add(t)
@@ -25,7 +26,9 @@ class PrimaryImplementation[B: type, I: type](NamedTuple):
     def __call__(self, impl: I) -> I:
         return self.set(impl)
 
+
 PrimaryImplementation.DATA = bidict()
+
 
 class FallbackImplementation[B: type, I: type](NamedTuple):
     base: B
@@ -41,5 +44,6 @@ class FallbackImplementation[B: type, I: type](NamedTuple):
 
     def __call__(self, impl: I) -> I:
         return self.set(impl)
+
 
 FallbackImplementation.DATA = bidict()

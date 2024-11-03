@@ -15,7 +15,6 @@ class InstanceIndex(ContextManager, Protocol):
     def type_index(self) -> TypeIndex: pass
 
 
-
 @runtime_checkable
 class ApplicationContext[ContextLifetime: InstanceIndex](TypeRegistry,
                                                          HasLifecycle[ContextLifetime],

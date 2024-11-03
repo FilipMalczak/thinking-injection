@@ -108,10 +108,6 @@ class SimpleIndex(NamedTuple):
                 if k not in ts
             })
         )
-    #
-    # known_concrete_types = TypeIndexMixin.known_concrete_types
-    # least_requiring = TypeIndexMixin.least_requiring
-    # order = TypeIndexMixin.order
 
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return TypeIndexMixin.known_concrete_types(self)
@@ -127,7 +123,7 @@ class SimpleIndex(NamedTuple):
         d = d or {}
         return SimpleIndex(frozendict(d))
 
-    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot:
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot:
         if edges is None:
             edges = set(GraphEdge)
         result = Dot(graph_name=name, graph_type="digraph", suppress_disconnected=True)
@@ -152,7 +148,7 @@ class SimpleIndex(NamedTuple):
                             k.__name__, d.type_.__name__,
                             label=GraphEdge.DEPENDS_ON.value,
                             arrowhead="open",
-                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ( "*" if d.kind == DependencyKind.COLLECTIVE else "" )
+                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ("*" if d.kind == DependencyKind.COLLECTIVE else "")
                         )
                     )
             if GraphEdge.REQUIRES in edges:
@@ -226,6 +222,7 @@ class SimpleRegistry(CustomizableTypeRegistry):
 
     def register(self, *t: Collectable[type]) -> DiscoveredTypes:
         out = set()
+
         def scan(x: type):
             if x not in self.data:
                 out.add(x)
@@ -257,7 +254,7 @@ class SimpleRegistry(CustomizableTypeRegistry):
             else:
                 unknowns.append(x)
             for v in self.data.values():
-                v.dependencies = { d for d in v.dependencies if d.type_ != x }
+                v.dependencies = {d for d in v.dependencies if d.type_ != x}
                 v.implementations.remove(x)
                 if v.forced_primary == x:
                     v.forced_primary = None

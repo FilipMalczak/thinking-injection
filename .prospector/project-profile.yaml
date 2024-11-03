@@ -1,0 +1,17 @@
+strictness: medium
+test-warnings: false
+doc-warnings: false
+inherits:
+  - default
+  - full_pep8
+ignore-paths:
+  - calculator
+
+
+pycodestyle:
+  disable:
+    - E261
+    - E262
+    - E265
+    - E701
+    - E704
