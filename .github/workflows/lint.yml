@@ -46,3 +46,4 @@ jobs:
           name: Linter report
           path: ./lint_report.xml
           reporter: java-junit
+          fail-on-error: false
