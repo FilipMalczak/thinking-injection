@@ -83,7 +83,7 @@ class DependencyKind(Enum):
             x
             # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
             for x in Union[t, _Guard].__args__
-            if not x in (type(None), _Guard)
+            if x not in (type(None), _Guard)
         )
     )
 

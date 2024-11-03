@@ -24,7 +24,7 @@ class Initializable(HasLifecycle, Protocol):
     def initialize(self) -> None: pass
 
     def deinitialize(self, exc: BaseException | None) -> None: pass
-        #todo type(self).__init__(self)
+    #todo type(self).__init__(self)
 
     def _initialize(self):
         log.info(f"Initializing {self}")

@@ -19,13 +19,16 @@ from thinking_programming.collectable import Collectable, collect
 
 log = getLogger(__name__)
 
+
 CONFIGURATION_TYPES = frozenset({
     ConfigurationPhase,
     ContextConfigurator
 })
 
+
 def is_configuration_item[T: type](t: T) -> bool:
     return issubclass(t, tuple(CONFIGURATION_TYPES))
+
 
 class ConfiguredIndex(InstanceIndex):
     def __init__(self, configurators_context: ApplicationContext, business_context: SimpleContext):
@@ -55,7 +58,9 @@ class ConfiguredIndex(InstanceIndex):
                     ordered_phases.append(instance)
                 else:
                     assert isinstance(instance, ContextConfigurator)
-                    assert declares_allowed_phase(instance), f"Configurator {instance} declares phase {instance.phase()} which doesn't match required {required_phase(instance)} phase" #todo
+                    assert declares_allowed_phase(instance), (f"Configurator {instance} declares phase "
+                                                              f"{instance.phase()} which doesn't match required "
+                                                              f"{required_phase(instance)} phase") #todo
                     configurator_per_phase[instance.phase()].append(instance)
             log.info(f"Ordered phases: {ordered_phases}")
             log.info("Customizers per phase:")
@@ -79,7 +84,10 @@ class ConfiguredIndex(InstanceIndex):
         return result
 
     def type_index(self) -> TypeIndex:
-        return TypeIndexUnion([self.configurators_index.type_index(), self.business_index.type_index()], ["configuration", "business"])
+        return TypeIndexUnion(
+            [self.configurators_index.type_index(), self.business_index.type_index()],
+            ["configuration", "business"]
+        )
 
 
 class ConfigurableContext(ApplicationContext[ConfiguredIndex]):

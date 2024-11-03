@@ -4,6 +4,7 @@ from thinking_injection.discovery import discover
 
 INTERFACES: set[type] = set()
 
+
 def interface[T: type](t: T) -> T:
     try:
         if t._is_protocol:
@@ -13,6 +14,7 @@ def interface[T: type](t: T) -> T:
 
     INTERFACES.add(t)
     return discover(t)
+
 
 def is_interface[T: type](t: T) -> bool:
     return t in INTERFACES
@@ -30,9 +32,10 @@ class InterfaceMeta(type):
 
 class Interface(metaclass=InterfaceMeta): pass
 
+
 class InterfaceTypeMeta(type):
     @classmethod
-    def __instancecheck__(self, instance):
+    def __instancecheck__(cls, instance):
         return isinstance(instance, type) and is_interface(instance)
 
 
@@ -49,12 +52,15 @@ class ConcreteClass(metaclass=ConcreteClassMeta): pass
 
 class ConcreteTypeMeta(type):
     @classmethod
-    def __instancecheck__(self, instance):
+    def __instancecheck__(cls, instance):
         return isinstance(instance, type) and is_concrete(instance)
+
 
 class ConcreteType(type, metaclass=ConcreteTypeMeta): pass
 
+
 AnyType = InterfaceType | ConcreteType
+
 
 class X: pass
 
@@ -63,8 +69,10 @@ assert is_concrete(X)
 assert issubclass(X, ConcreteClass)
 assert isinstance(X, ConcreteType)
 
+
 @interface
 class I: pass
+
 
 assert is_interface(I)
 assert issubclass(I, Interface)

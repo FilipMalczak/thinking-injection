@@ -12,6 +12,7 @@ class UnknownTypesException(Exception):
     def __str__(self):
         return f"{self.message}; unknown types: {set(self.unknown_types)}"
 
+
 class UnknownTypeException(UnknownTypesException):
     def __init__(self, msg: str, unknown_type: type):
         super(msg, [unknown_type])
@@ -19,7 +20,6 @@ class UnknownTypeException(UnknownTypesException):
     @property
     def unknown_type(self):
         return list(self.unknown_types)[0] #todo use next()?
-
 
     def __repr__(self):
         return f"UnknownTypeException(message='{self.message}', unknown_type={self.unknown_type})"

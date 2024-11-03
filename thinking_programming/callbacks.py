@@ -10,6 +10,7 @@ logger = getLogger(__name__)
 _IS_CALLBACK = "__is_callback_method__"
 _IS_REVERSE_ORDER = "__is_callback_order_reversed__"
 
+
 @fluent_decorator
 def callback_method(reverse_order_of_composing=False):
     def decorator(f):
@@ -17,6 +18,7 @@ def callback_method(reverse_order_of_composing=False):
         setattr(f, _IS_REVERSE_ORDER, reverse_order_of_composing)
         return f
     return decorator
+
 
 def _callback_methods(t: type):
     return list(
@@ -29,9 +31,12 @@ def _callback_methods(t: type):
         )
     )
 
+
 _composite_types = {}
 
+
 T = TypeVar("T")
+
 
 @dataclass
 class Composite:
@@ -48,12 +53,14 @@ class Composite:
 
     __repr__ = __str__
 
+
 #todo @cached
 @dataclass_transform()
-def CompositeCallback(t: type[T]) -> type[T, Composite]:
+def CompositeCallback(t: type[T]) -> type[T, Composite]: # noqa: N802
     if t.__name__ in _composite_types:
         return _composite_types[t.__name__]
     type_name = f"Composite{t.__name__}"
+
     def impl(m):
         order = reversed if getattr(m, _IS_REVERSE_ORDER) else lambda x: x
         @wraps(m)
@@ -61,6 +68,7 @@ def CompositeCallback(t: type[T]) -> type[T, Composite]:
             for delegate in order(self.delegates):
                 getattr(delegate, m.__name__)(*args, **kwargs)
         return wrapper
+
     methods = {
         m.__name__: impl(m)
         for m in _callback_methods(t)
@@ -68,6 +76,7 @@ def CompositeCallback(t: type[T]) -> type[T, Composite]:
     out = type(type_name, (Composite, t), methods)
     _composite_types[t.__name__] = out
     return out
+
 
 def compose(callbacks: Union[list[T], T], t: type[T]) -> T:
     if isinstance(callbacks, t): #pycharm will complain, but ignore it
