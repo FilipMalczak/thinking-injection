@@ -1,10 +1,10 @@
-from typing import Protocol, Optional, runtime_checkable, ContextManager, Self
+from typing import Protocol, Optional, runtime_checkable, ContextManager
 
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.lifecycle import HasLifecycle
 from thinking_injection.registry.protocol import TypeRegistry, TypeIndex
-
 from thinking_programming.collectable import Collectable
+
 
 @runtime_checkable
 class InstanceIndex(ContextManager, Protocol):

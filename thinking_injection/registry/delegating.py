@@ -1,6 +1,6 @@
 from typing import Optional, Iterable, Self
 
-from pydot import Dot, Subgraph, Cluster
+from pydot import Dot, Cluster
 
 from thinking_injection.common.dependencies import Dependencies
 from thinking_injection.interfaces import ConcreteType, is_concrete

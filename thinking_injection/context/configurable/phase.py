@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Protocol, Self, NamedTuple
 
 from thinking_injection.discovery import discover
 from thinking_injection.injectable import Injectable

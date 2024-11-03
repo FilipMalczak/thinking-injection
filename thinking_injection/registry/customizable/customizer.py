@@ -2,7 +2,6 @@ from typing import runtime_checkable, Protocol, Optional
 
 from thinking_injection.interfaces import is_concrete
 from thinking_injection.registry.protocol import DiscoveredTypes
-
 from thinking_programming.collectable import Collectable
 
 

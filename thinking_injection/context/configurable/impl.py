@@ -3,22 +3,18 @@ from contextlib import contextmanager
 from logging import getLogger
 from typing import Optional
 
-from pydot import Dot
 from thinking_modules.model import ModuleName
 
+from thinking_injection.common.exceptions import UnknownTypesException
 from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase, \
     required_phase
-from thinking_injection.ordering import TypeComparator
-from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
-    TypeImplementationsCustomizer
-from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.context.configurable.phase import ConfigurationPhase
 from thinking_injection.context.protocol import ApplicationContext, InstanceIndex
 from thinking_injection.context.simple import SimpleContext
+from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.delegating import TypeIndexUnion
-from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex, GraphEdge
+from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex
 from thinking_injection.typeset import ImmutableTypeSet, AnyTypeSet, from_package
-
 from thinking_programming.collectable import Collectable, collect
 
 log = getLogger(__name__)

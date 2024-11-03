@@ -1,7 +1,7 @@
 from contextlib import contextmanager
-from enum import Enum, auto
+from enum import Enum
 from functools import cmp_to_key
-from typing import Protocol, runtime_checkable, Optional, Self, Iterable, NamedTuple
+from typing import Protocol, runtime_checkable, Optional, Self, Iterable
 
 from pydot import Dot
 

@@ -1,21 +1,21 @@
 from abc import abstractmethod
 from contextlib import contextmanager
-from logging import getLogger
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
 
 from thinking_injection.cloneable import Cloneable
+from thinking_injection.common.dependencies import Dependency, DependencyKind
 from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.context.protocol import InstanceIndex, ApplicationContext
-from thinking_injection.common.dependencies import Dependency, DependencyKind
 from thinking_injection.injectable import Injectable
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
 from thinking_injection.registry.delegating import TypeRegistryDelegateMixin
-from thinking_injection.registry.protocol import TypeIndex, TypeRegistry
+from thinking_injection.registry.protocol import TypeIndex
 from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import AnyTypeSet
 from thinking_programming.collectable import Collectable
+
 
 @runtime_checkable
 class ObjectLifecycle[T](Protocol):

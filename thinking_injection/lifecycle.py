@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Callable, Iterable, Protocol, ContextManager, runtime_checkable
 
-from type_intersections import Intersection
-
 log = getLogger(__name__)
 
 

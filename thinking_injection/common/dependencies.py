@@ -3,8 +3,8 @@ from inspect import getfullargspec
 from types import GenericAlias
 from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
 
-from thinking_injection.interfaces import AnyType
 from thinking_injection.common.implementations import ImplementationDetails
+from thinking_injection.interfaces import AnyType
 from thinking_injection.typeset import TypeSet
 
 
