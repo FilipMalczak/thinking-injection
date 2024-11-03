@@ -77,11 +77,26 @@ jobs:
         run: |
           ./run_lint.sh
 
-      - name: Upload linter report
+      - name: Upload linter text report
         uses: actions/upload-artifact@v4
         with:
           name: lint_report.txt
           path: ./lint_report.txt
+
+      - name: Upload linter XMLUnit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint_report.xml
+          path: ./lint_report.xml
+
+
+      - name: Publish linter report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Linter report
+          path: ./lint_report.xml
+          reporter: java-junit
 # TODO reenable it
 #      - name: Publish coverage reports
 #        uses: irongut/CodeCoverageSummary@v1.3.0
