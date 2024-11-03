@@ -78,12 +78,14 @@ jobs:
           ./run_lint.sh
 
       - name: Upload linter text report
+        if: ${{matrix.os}} == "ubuntu-latest"
         uses: actions/upload-artifact@v4
         with:
           name: lint_report.txt
           path: ./lint_report.txt
 
       - name: Upload linter XMLUnit report
+        if: ${{matrix.os}} == "ubuntu-latest"
         uses: actions/upload-artifact@v4
         with:
           name: lint_report.xml
@@ -92,7 +94,7 @@ jobs:
 
       - name: Publish linter report
         uses: dorny/test-reporter@v1
-        if: success() || failure()
+        if: (success() || failure()) && ${{matrix.os}} == "ubuntu-latest"
         with:
           name: Linter report
           path: ./lint_report.xml
