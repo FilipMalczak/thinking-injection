@@ -35,6 +35,9 @@ jobs:
       - name: Run tests
         run: |
           python -m test.run_all
+          
+        
+      
 
       - name: Publish test report
         uses: dorny/test-reporter@v1

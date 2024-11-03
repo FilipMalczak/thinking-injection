@@ -1,4 +1,3 @@
-#!/usr/bin/zsh
 set -e
 
 here="$(realpath $(dirname $0))"

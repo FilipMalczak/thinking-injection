@@ -14,6 +14,8 @@ Pythonic DI for AI, as funny as it sounds.
 
 ## Long story short
 
+> TODO API changed, rewrite this
+
  - put your code in a root package (let's call it `root`) with any number and depth of subpackages
  - mark the types that should be picked up by framework with `@discover`
    - `from thinking_injection.discovery import discover`
@@ -29,7 +31,6 @@ Pythonic DI for AI, as funny as it sounds.
    - `A` is a `SIMPLE` dependency, `B` - a `COLLECTIVE` one, `C` - an optional one
    - there is a notion of `primary` implementation, which works as you'd expect it (the type itself for non-interface
      types, the subclass if there is only one subclass, but you can also force one, e.g. with decorator)
-     - see ['Implementations.build(...)'](./thinking_injection/implementations.py)
      - `from thinking_injection.discovery import PrimaryImplementation` - use `@PrimaryImplementation(Supertype)` on the subtype
    - simple dependencies will use the primary implementation
    - optional dependencies can be phrased any way you like: `C | None`, `Optional[C]` or `Union[C, None]`, etc

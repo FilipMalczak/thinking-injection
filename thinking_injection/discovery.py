@@ -1,4 +1,6 @@
-from typing import Callable, NamedTuple
+from typing import NamedTuple
+
+from bidict import bidict
 
 DISCOVERED_TYPES = set()
 
@@ -16,10 +18,28 @@ class PrimaryImplementation[B: type, I: type](NamedTuple):
 
     def set(self, impl: I) -> I:
         assert self.get() is None
+        assert issubclass(impl, self.base)
         PrimaryImplementation.DATA[self.base] = impl
         return impl
 
     def __call__(self, impl: I) -> I:
         return self.set(impl)
 
-PrimaryImplementation.DATA = {}
+PrimaryImplementation.DATA = bidict()
+
+class FallbackImplementation[B: type, I: type](NamedTuple):
+    base: B
+
+    def get(self) -> I:
+        return FallbackImplementation.DATA.get(self.base, None)
+
+    def set(self, impl: I) -> I:
+        assert self.get() is None
+        assert issubclass(impl, self.base)
+        FallbackImplementation.DATA[self.base] = impl
+        return impl
+
+    def __call__(self, impl: I) -> I:
+        return self.set(impl)
+
+FallbackImplementation.DATA = bidict()

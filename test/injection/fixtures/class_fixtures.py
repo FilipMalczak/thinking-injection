@@ -2,66 +2,69 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import NamedTuple, Optional, Union
 
+from thinking_injection.discovery import discover
 from thinking_injection.injectable import Injectable
 from thinking_injection.interfaces import interface
 from thinking_injection.lifecycle import HasLifecycle, Initializable
 
 
+@discover
 class SimpleClass: pass
 
+
+@discover
 class ANamedTuple(NamedTuple):
     x: int
     y: str
 
+
+@discover
 @dataclass
 class ADataclass:
     x: int
     y: str
 
+
+@discover
 class HasLifecycleDuckTyped:
     @contextmanager
     def lifecycle(self):
         yield
 
 
+@discover
 class HasLifecycleInheriting(HasLifecycle):
     @contextmanager
     def lifecycle(self):
         yield
 
+
+@discover
 class SimpleInitializable(Initializable):
     def initialize(self) -> None: pass
 
     def deinitialize(self, exc: BaseException | None) -> None: pass
 
 
-
-
-
-
-
-
-
-
 class InjectableNoDeps(Injectable):
     def inject_requirements(self) -> None: pass
+
 
 class InjectableOneValueDep(Injectable):
     def inject_requirements(self, val: SimpleClass) -> None: pass
 
+
 class InjectableOneConcreteDep(Injectable):
     def inject_requirements(self, concrete: InjectableNoDeps) -> None: pass
+
 
 class InjectableTwoConcreteDep(Injectable):
     def inject_requirements(self, concrete1: InjectableNoDeps, concrete2: InjectableOneConcreteDep) -> None: pass
 
 
-
-
-
-
 class InjectableOptionalInjectableByTyping(Injectable):
     def inject_requirements(self, optional: Optional[InjectableNoDeps]) -> None: pass
+
 
 class InjectableOptionalInjectableByOperator(Injectable):
     def inject_requirements(self, optional: InjectableNoDeps | None) -> None: pass
@@ -74,6 +77,7 @@ class InjectableOptionalInjectableByUnion(Injectable):
 class InjectableOptionalValueByTyping(Injectable):
     def inject_requirements(self, optional: Optional[SimpleClass]) -> None: pass
 
+
 class InjectableOptionalValueByOperator(Injectable):
     def inject_requirements(self, optional: SimpleClass | None) -> None: pass
 
@@ -82,16 +86,19 @@ class InjectableOptionalValueByUnion(Injectable):
     def inject_requirements(self, optional: Union[SimpleClass, None]) -> None: pass
 
 
-
-
-
 @interface
 class AnInterface: pass
 
+
+@discover
 class Impl1(AnInterface): pass
 
+
+@discover
 class Impl2(AnInterface): pass
 
+
+@discover
 class Impl11(Impl1): pass
 
 

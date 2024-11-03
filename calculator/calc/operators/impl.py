@@ -18,7 +18,7 @@ class Multiplying:
         return val1 * val2
 
     def text(self):
-        return "*"
+        return "x"
 
 @discover
 class Subtracting(Injectable):
