@@ -17,7 +17,7 @@ class Details(NamedTuple):
 
     @classmethod
     def of(cls, registry: TypeRegistry) -> dict[type, Self]:
-        snap = registry.snapshot()
+        snap = registry.type_index()
         return {
             t: Details(snap.implementations(t), snap.primary_implementation(t))
             for t in snap.known_types()
@@ -26,7 +26,7 @@ class Details(NamedTuple):
 @case
 def test_fixture_impls():
     typeset = from_module(class_fixtures)
-    registry = SimpleRegistry.make(typeset)
+    registry = SimpleRegistry(typeset)
     expected = {
         t:
             Details(frozenset([t]), t)
@@ -52,7 +52,7 @@ class ConcreteGrandchild12(ConcreteChild1): pass
 
 @case
 def test_concrete_hierarchy_with_default_primary():
-    registry = SimpleRegistry.make(ConcreteParent, ConcreteChild1, ConcreteChild2, ConcreteGrandchild11, ConcreteGrandchild12)
+    registry = SimpleRegistry(ConcreteParent, ConcreteChild1, ConcreteChild2, ConcreteGrandchild11, ConcreteGrandchild12)
     expected = {
         ConcreteParent: Details(frozenset([ConcreteParent,ConcreteChild1, ConcreteChild2, ConcreteGrandchild11, ConcreteGrandchild12]), ConcreteParent),
         ConcreteChild1: Details(frozenset([ConcreteChild1, ConcreteGrandchild11, ConcreteGrandchild12]), ConcreteChild1),
@@ -78,7 +78,7 @@ class ConcreteGrandchild212(ConcreteChild21): pass
 
 @case
 def test_concrete_hierarchy_with_specific_primaries():
-    registry = SimpleRegistry.make(ConcreteParent2, ConcreteChild21, ConcreteChild22, ConcreteGrandchild211, ConcreteGrandchild212)
+    registry = SimpleRegistry(ConcreteParent2, ConcreteChild21, ConcreteChild22, ConcreteGrandchild211, ConcreteGrandchild212)
     expected = {
         ConcreteParent2: Details(frozenset([ConcreteParent2,ConcreteChild21, ConcreteChild22, ConcreteGrandchild211, ConcreteGrandchild212]), ConcreteChild22),
         ConcreteChild21: Details(frozenset([ConcreteChild21, ConcreteGrandchild211, ConcreteGrandchild212]), ConcreteGrandchild211),
@@ -105,13 +105,13 @@ class SubImpl4(SubInterface1): pass
 
 @case
 def no_impl_for_interface():
-    registry = SimpleRegistry.make(TheInterface)
+    registry = SimpleRegistry(TheInterface)
     expected= {TheInterface: Details(frozenset(), None)}
     assert_equal_dicts(expected, Details.of(registry))
 
 @case
 def single_impl_for_interface():
-    registry = SimpleRegistry.make(TheInterface, Impl1)
+    registry = SimpleRegistry(TheInterface, Impl1)
     expected = {
         TheInterface: Details(frozenset([Impl1]), Impl1),
         Impl1: Details(frozenset([Impl1]), Impl1)
@@ -121,7 +121,7 @@ def single_impl_for_interface():
 
 @case
 def multiple_impls_for_interface():
-    registry = SimpleRegistry.make(TheInterface, Impl1, Impl2, Impl3, SubInterface1, SubImpl4)
+    registry = SimpleRegistry(TheInterface, Impl1, Impl2, Impl3, SubInterface1, SubImpl4)
     expected = {
         TheInterface: Details(frozenset([Impl1, Impl2, Impl3, SubImpl4]), None),
         Impl1: Details(frozenset([Impl1]), Impl1),
@@ -142,7 +142,7 @@ class AnotherImpl2(AnotherInterface): pass
 
 @case
 def no_impls_for_interface_w_primary():
-    registry = SimpleRegistry.make(AnotherInterface)
+    registry = SimpleRegistry(AnotherInterface)
     expected = {
         AnotherInterface: Details(frozenset(), None)
     }
@@ -150,7 +150,7 @@ def no_impls_for_interface_w_primary():
 
 @case
 def one_interface_impl_that_isnt_primary():
-    registry = SimpleRegistry.make(AnotherInterface, AnotherImpl1)
+    registry = SimpleRegistry(AnotherInterface, AnotherImpl1)
     expected = {
         AnotherInterface: Details(frozenset([AnotherImpl1]), AnotherImpl1),
         AnotherImpl1: Details(frozenset([AnotherImpl1]), AnotherImpl1)
@@ -159,7 +159,7 @@ def one_interface_impl_that_isnt_primary():
 
 @case
 def one_interface_impl_that_is_primary():
-    registry = SimpleRegistry.make(AnotherInterface, AnotherImpl2)
+    registry = SimpleRegistry(AnotherInterface, AnotherImpl2)
     expected = {
         AnotherInterface: Details(frozenset([AnotherImpl2]), AnotherImpl2),
         AnotherImpl2: Details(frozenset([AnotherImpl2]), AnotherImpl2)
@@ -168,7 +168,7 @@ def one_interface_impl_that_is_primary():
 
 @case
 def interface_with_multiple_impls_and_primary():
-    registry = SimpleRegistry.make(AnotherInterface, AnotherImpl1, AnotherImpl2)
+    registry = SimpleRegistry(AnotherInterface, AnotherImpl1, AnotherImpl2)
     expected = {
         AnotherInterface: Details(frozenset([AnotherImpl1, AnotherImpl2]), AnotherImpl2),
         AnotherImpl1: Details(frozenset([AnotherImpl1]), AnotherImpl1),

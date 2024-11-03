@@ -9,7 +9,7 @@ from thinking_injection.registry.simple import SimpleRegistry
 
 
 def reqs(registry: TypeRegistry) -> dict[type, frozenset[type]]:
-    snap = registry.snapshot()
+    snap = registry.type_index()
     return {
         t: snap.prerequisites(t)
         for t in snap.known_concrete_types()
@@ -27,7 +27,7 @@ class OptionalDependent(Injectable):
 
 @case
 def test_simple_dependency():
-    registry = SimpleRegistry.make(SimpleDependency, SimpleDependent)
+    registry = SimpleRegistry(SimpleDependency, SimpleDependent)
     expected = {
         SimpleDependent: frozenset([SimpleDependency]),
         SimpleDependency: frozenset()
@@ -36,7 +36,7 @@ def test_simple_dependency():
 
 @case
 def test_optional_dependency_present():
-    registry = SimpleRegistry.make(SimpleDependency, OptionalDependent)
+    registry = SimpleRegistry(SimpleDependency, OptionalDependent)
     expected = {
         OptionalDependent: frozenset([SimpleDependency]),
         SimpleDependency: frozenset()
@@ -46,7 +46,7 @@ def test_optional_dependency_present():
 
 @case
 def test_optional_dependency_missing():
-    registry = SimpleRegistry.make(OptionalDependent)
+    registry = SimpleRegistry(OptionalDependent)
     expected = {
         OptionalDependent: frozenset(),
     }
@@ -64,13 +64,13 @@ class DependsOnInter(Injectable):
 
 @case
 def test_collective_of_interface_wo_impls():
-    registry = SimpleRegistry.make(DependsOnInter)
+    registry = SimpleRegistry(DependsOnInter)
     expected = {
         DependsOnInter: frozenset()
     }
     assert_equal_dicts(expected, reqs(registry))
 
-    registry = SimpleRegistry.make(DependsOnInter, Inter)
+    registry = SimpleRegistry(DependsOnInter, Inter)
     expected = {
         DependsOnInter: frozenset()
     }
@@ -78,7 +78,7 @@ def test_collective_of_interface_wo_impls():
 
 @case
 def test_collective_of_interface_w_single_impl():
-    registry = SimpleRegistry.make(DependsOnInter, Inter, Impl1)
+    registry = SimpleRegistry(DependsOnInter, Inter, Impl1)
     expected = {
         DependsOnInter: frozenset([Impl1]),
         Impl1: frozenset()
@@ -88,7 +88,7 @@ def test_collective_of_interface_w_single_impl():
 
 @case
 def test_collective_of_interface_w_multiple_impls():
-    registry = SimpleRegistry.make(DependsOnInter, Inter, Impl1, Impl2)
+    registry = SimpleRegistry(DependsOnInter, Inter, Impl1, Impl2)
     expected = {
         DependsOnInter: frozenset([Impl1, Impl2]),
         Impl1: frozenset(),

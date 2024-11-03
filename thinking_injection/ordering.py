@@ -45,5 +45,5 @@ def requirement_comparator(requires: Requires, cyclic_resolver: TypeComparator) 
             else:
                 # no dependency between types, order doesn't matter
                 # there's no way names are the same, so no 0 case
-                return -1 if t1.__name__ < t2.__name__ else 1
+                return -1 if t1.__qualname__ < t2.__qualname__ else 1
     return comparator

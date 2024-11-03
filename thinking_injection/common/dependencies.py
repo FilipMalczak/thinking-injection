@@ -3,8 +3,8 @@ from inspect import getfullargspec
 from types import GenericAlias
 from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
 
-from thinking_injection.interfaces import AnyType
 from thinking_injection.common.implementations import ImplementationDetails
+from thinking_injection.interfaces import AnyType
 from thinking_injection.typeset import TypeSet
 
 
@@ -116,8 +116,9 @@ def get_dependencies(t: type) -> Dependencies | None:
         #todo replace with protocol check instead of duck-typing?
         return frozenset()
     spec = getfullargspec(inject_method)
-    assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
-    assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
+    #todo rethink these constraints
+    # assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
+    # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
     if spec.kwonlyargs:
         assert spec.kwonlydefaults is not None
         for kwonly in spec.kwonlyargs:

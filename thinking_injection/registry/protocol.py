@@ -1,7 +1,13 @@
+from contextlib import contextmanager
+from enum import Enum
 from functools import cmp_to_key
-from typing import Protocol, runtime_checkable, Optional, Self, Iterable, NamedTuple
+from typing import Protocol, runtime_checkable, Optional, Self, Iterable
 
+from pydot import Dot
+
+from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies
+from thinking_injection.common.index import TypeIndex
 from thinking_injection.interfaces import ConcreteType, is_concrete
 from thinking_injection.lifecycle import HasLifecycle
 from thinking_injection.ordering import TypeComparator, requirement_comparator, CyclicResolver
@@ -13,6 +19,8 @@ Implementations = frozenset[ConcreteType]
 Prerequisites = frozenset[ConcreteType]
 
 
+def requires(idx: TypeIndex, depending: ConcreteType, dependency: ConcreteType) -> bool:
+    return dependency in idx.prerequisites(depending)
 
 class TypeIndexMixin:
     def known_concrete_types(self) -> frozenset[ConcreteType]:
@@ -27,15 +35,23 @@ class TypeIndexMixin:
         return frozenset(k for k in counts.keys() if counts[k] == min_count)
 
     def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
-        comparator = requirement_comparator(self.requires, cyclic_resolver or CyclicResolver())
+        comparator = requirement_comparator(lambda x, y: requires(self, x, y), cyclic_resolver or CyclicResolver())
         key_foo = cmp_to_key(comparator)
-        if self.known_types():
+        # if self.known_types(): #fixme or known_concrete_types?
+        if self.known_concrete_types():
             least_dependent = self.least_requiring()
             order = sorted(least_dependent, key=key_foo)
             for x in order:
                 yield x
             remainder = self.without(least_dependent)
             yield from remainder.order(cyclic_resolver)
+
+
+#fixme not the best way, not the best placement
+class GraphEdge(Enum):
+    IMPLEMENTS = "implements"
+    DEPENDS_ON = "depends on"
+    REQUIRES = "requires"
 
 
 
@@ -60,12 +76,23 @@ class TypeIndex(Protocol):
 
     def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]: pass
 
+    # todo untested
+    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot: pass
 
 
 @runtime_checkable
-class TypeRegistry(HasLifecycle, Protocol):
+class TypeRegistry(HasLifecycle, Cloneable, Protocol):
     def register(self, *t: Collectable[type]) -> DiscoveredTypes: pass
 
+    def remove(self, *t: Collectable[type]):
+        '''raises UnknownTypesException'''
+
+
+    #todo make this a property across the implementations
     def known_types(self) -> ImmutableTypeSet: pass
 
-    def snapshot(self) -> TypeIndex: pass
+    def type_index(self) -> TypeIndex: pass
+
+    @contextmanager
+    def lifecycle(self) -> TypeIndex:
+        yield self.type_index()

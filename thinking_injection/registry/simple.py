@@ -4,19 +4,22 @@ from functools import cache
 from typing import NamedTuple, Optional, Self, Callable, Iterable
 
 from frozendict import frozendict
+from pydot import Dot, Node, Edge
 
+from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
+from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
+from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.discovery import PrimaryImplementation
 from thinking_injection.interfaces import ConcreteType, is_concrete
-from thinking_injection.common.implementations import ImplementationDetails
-from thinking_injection.lifecycle import snapshot_as_lifecycle
 from thinking_injection.ordering import TypeComparator
+from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
+    TypeImplementationsCustomizer
+from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
 from thinking_injection.registry.protocol import TypeIndex, Implementations, Prerequisites, DiscoveredTypes, \
-    TypeIndexMixin, TypeRegistry
+    TypeIndexMixin, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable, collect
-
-
 
 
 class TypeDescriptor(NamedTuple):
@@ -26,14 +29,14 @@ class TypeDescriptor(NamedTuple):
 
     def without(self, ts: set[type]) -> Self:
         return TypeDescriptor(
-            frozenset(x for x in self.dependencies if x not in ts),
+            frozenset(x for x in self.dependencies if x.type_ not in ts),
             frozenset(x for x in self.implementations if x not in ts),
             self.primary if self.primary not in ts else None
         )
 
 
 @dataclass
-class MutableTypeDescriptor:
+class MutableTypeDescriptor(Cloneable):
     dependencies: set[Dependency] = field(default_factory=set)
     implementations: set[ConcreteType] = field(default_factory=set)
     forced_primary: Optional[ConcreteType] = None
@@ -44,6 +47,9 @@ class MutableTypeDescriptor:
             frozenset(self.implementations),
             self.forced_primary or primary_provider()
         )
+
+    def clone(self) -> Self:
+        return MutableTypeDescriptor(set(self.dependencies), set(self.implementations), self.forced_primary)
 
 
 class SimpleIndex(NamedTuple):
@@ -121,21 +127,102 @@ class SimpleIndex(NamedTuple):
         d = d or {}
         return SimpleIndex(frozendict(d))
 
+    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot:
+        if edges is None:
+            edges = set(GraphEdge)
+        result = Dot(graph_name=name, graph_type="digraph", suppress_disconnected=True)
+        for k in self.data.keys():
+            result.add_node(Node(k.__name__, shape="box" if is_concrete(k) else "diamond"))
+        for k in self.data.keys():
+            if GraphEdge.IMPLEMENTS in edges:
+                primary = self.primary_implementation(k)
+                for i in self.implementations(k):
+                    result.add_edge(
+                        Edge(
+                            i.__name__, k.__name__,
+                            style="bold" if i == primary else "solid",
+                            label=GraphEdge.IMPLEMENTS.value,
+                            arrowhead="empty"
+                        )
+                    )
+            if GraphEdge.DEPENDS_ON in edges:
+                for d in self.dependencies(k):
+                    result.add_edge(
+                        Edge(
+                            k.__name__, d.type_.__name__,
+                            label=GraphEdge.DEPENDS_ON.value,
+                            arrowhead="open",
+                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ( "*" if d.kind == DependencyKind.COLLECTIVE else "" )
+                        )
+                    )
+            if GraphEdge.REQUIRES in edges:
+                for r in self.prerequisites(k):
+                    result.add_edge(
+                        Edge(
+                            k.__name__, r.__name__,
+                            label=GraphEdge.REQUIRES.value,
+                            style="dashed",
+                            arrowhead="open"
+                        )
+                    )
+        return result
+
 
 assert issubclass(SimpleIndex, TypeIndex)
 
 
-@snapshot_as_lifecycle
-class SimpleRegistry(NamedTuple):
-    data: dict[type, MutableTypeDescriptor]
+class SimpleTypeImplementationsCustomizer(TypeImplementationsCustomizer):
+    def __init__(self, descriptor: MutableTypeDescriptor, primary_provider: Callable[[], Optional[ConcreteType]]):
+        self._descriptor = descriptor
+        self._primary_provider = primary_provider
 
-    @classmethod
-    def make(cls, *t: Collectable[type]) -> Self:
-        return SimpleRegistry(defaultdict(MutableTypeDescriptor)).with_registered(*t)
+    @property
+    def all(self) -> frozenset[type]:
+        return frozenset(self._descriptor.implementations)
 
-    def with_registered(self, *t: Collectable[type]) -> Self:
+    @property
+    def primary(self) -> Optional[type]:
+        return self._descriptor.forced_primary or self._primary_provider()
+
+    @primary.setter
+    def primary(self, t: type) -> None:
+        #todo check invariants, like t implements this type or at least is concrete?
+        self._descriptor.forced_primary = t
+
+
+class SimpleImplementationsCustomizer(ImplementationsCustomizer):
+    def __init__(self, registry: 'SimpleRegistry'):
+        self._registry = registry
+
+    def of(self, t: type) -> TypeImplementationsCustomizer:
+        if t not in self._registry.known_types():
+            raise UnknownTypeException("Cannot customize implementations because type is not registered", t)
+        return SimpleTypeImplementationsCustomizer(self._registry.data[t], lambda: self._registry._figure_out_primary(t))
+
+
+class SimpleTypeRegistryCustomizer(TypeRegistryCustomizer):
+    def __init__(self, registry: 'SimpleRegistry'):
+        self._registry = registry
+
+    def known_types(self) -> frozenset[type]:
+        return self._registry.known_types()
+
+    def register(self, *t: Collectable[type]) -> DiscoveredTypes:
+        return self._registry.register(*t)
+
+    def unregister(self, *t: Collectable[type]):
+        return self._registry.remove(*t)
+
+    @property
+    def implementations(self) -> ImplementationsCustomizer:
+        return SimpleImplementationsCustomizer(self._registry)
+
+
+# @snapshot_as_lifecycle #todo
+class SimpleRegistry(CustomizableTypeRegistry):
+    def __init__(self, *t: Collectable[type]):
+        self.data = defaultdict(MutableTypeDescriptor)
         self.register(*t)
-        return self
 
     def register(self, *t: Collectable[type]) -> DiscoveredTypes:
         out = set()
@@ -162,6 +249,21 @@ class SimpleRegistry(NamedTuple):
                         self.data[newly_scanned].implementations.add(already_scanned)
         return frozenset(out)
 
+    def remove(self, *t: Collectable[type]):
+        unknowns = []
+        for x in collect(type, *t):
+            if x in self.data:
+                del self.data[x]
+            else:
+                unknowns.append(x)
+            for v in self.data.values():
+                v.dependencies = { d for d in v.dependencies if d.type_ != x }
+                v.implementations.remove(x)
+                if v.forced_primary == x:
+                    v.forced_primary = None
+        if unknowns:
+            raise UnknownTypesException("Cannot remove unknown types from type registry", unknowns)
+
     def known_types(self) -> ImmutableTypeSet:
         return frozenset(self.data.keys())
 
@@ -183,11 +285,17 @@ class SimpleRegistry(NamedTuple):
         #     return self.defaults[t]
         return None
 
-    def snapshot(self) -> TypeIndex:
+    def type_index(self) -> TypeIndex:
         return SimpleIndex(frozendict({
             t: desc.freeze(lambda: self._figure_out_primary(t))
             for t, desc in self.data.items()
         }))
 
+    def customizer(self) -> TypeRegistryCustomizer:
+        return SimpleTypeRegistryCustomizer(self)
 
-assert issubclass(SimpleRegistry, TypeRegistry)
+    def clone(self) -> Self:
+        return SimpleRegistry({k: v.clone() for k, v in self.data.items()})
+
+
+assert issubclass(SimpleRegistry, CustomizableTypeRegistry)
