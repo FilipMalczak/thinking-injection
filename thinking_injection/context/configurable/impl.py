@@ -6,7 +6,8 @@ from typing import Optional
 from pydot import Dot
 from thinking_modules.model import ModuleName
 
-from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase
+from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase, \
+    required_phase
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer
@@ -58,7 +59,7 @@ class ConfiguredIndex(InstanceIndex):
                     ordered_phases.append(instance)
                 else:
                     assert isinstance(instance, ContextConfigurator)
-                    assert declares_allowed_phase(instance)
+                    assert declares_allowed_phase(instance), f"Configurator {instance} declares phase {instance.phase()} which doesn't match required {required_phase(instance)} phase" #todo
                     configurator_per_phase[instance.phase()].append(instance)
             log.info(f"Ordered phases: {ordered_phases}")
             log.info("Customizers per phase:")

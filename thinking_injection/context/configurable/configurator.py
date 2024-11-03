@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Protocol, Callable
+from typing import Protocol, Callable, Optional
 
 from thinking_injection.injectable import Injectable
 from thinking_injection.interfaces import interface, ConcreteType
@@ -30,15 +30,20 @@ def specialized_configurator[T: type[ContextConfigurator]](p: type[Configuration
         return t
     return register
 
+def required_phase(configurator: ContextConfigurator) -> Optional[type[ConfigurationPhase]]:
+    for c, p in SPECIALIZED_CONFIGURATOR_PHASES.items():
+        # fixme not a clue why isinstance won't work here
+        if issubclass(type(configurator), c):
+        # if isinstance(configurator, c):
+            return p
+    return None
 
 def declares_allowed_phase(configurator: ContextConfigurator) -> bool:
-    for c, p in SPECIALIZED_CONFIGURATOR_PHASES.items():
-        if isinstance(configurator, c):
-            if not isinstance(configurator.phase(), p):
-                return False
-    return True
-
-#todo specialized configurators, like "add fallback" or "force impl"
+    required = required_phase(configurator)
+    if required is None:
+        return True
+    # fixme not a clue why isinstance won't work here
+    return issubclass(type(configurator.phase()), required)
 
 
 @interface
