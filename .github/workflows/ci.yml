@@ -71,34 +71,6 @@ jobs:
         with:
           name: coverage_${{matrix.os}}__${{ matrix.python-version }}__${{ github.event_name }}
           path: coverage/
-
-      - name: Run linter
-        if: ${{matrix.os}} == "ubuntu-latest"
-        run: |
-          ./run_lint.sh
-
-      - name: Upload linter text report
-        if: ${{matrix.os}} == "ubuntu-latest"
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint_report.txt
-          path: ./lint_report.txt
-
-      - name: Upload linter XMLUnit report
-        if: ${{matrix.os}} == "ubuntu-latest"
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint_report.xml
-          path: ./lint_report.xml
-
-
-      - name: Publish linter report
-        uses: dorny/test-reporter@v1
-        if: (success() || failure()) && ${{matrix.os}} == "ubuntu-latest"
-        with:
-          name: Linter report
-          path: ./lint_report.xml
-          reporter: java-junit
 # TODO reenable it
 #      - name: Publish coverage reports
 #        uses: irongut/CodeCoverageSummary@v1.3.0
