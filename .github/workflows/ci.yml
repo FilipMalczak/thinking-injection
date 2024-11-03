@@ -29,6 +29,7 @@ jobs:
           bash ./install_develop.sh
       - name: Install requirements
         run: |
+          [ -f ./build-requirements.txt ] && pip install -r ./build-requirements.txt || echo "No build-requirements.txt found"
           [ -f ./requirements.txt ] && pip install -r ./requirements.txt || echo "No requirements.txt found"
           [ -f ./test-requirements.txt ] && pip install -r ./test-requirements.txt || echo "No test-requirements.txt found"
       - name: Run tests
@@ -52,6 +53,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
+#todo upload test reports even in case of failure?
       - name: Upload XML test report
         uses: actions/upload-artifact@v4
         with:
@@ -69,6 +71,17 @@ jobs:
         with:
           name: coverage_${{matrix.os}}__${{ matrix.python-version }}__${{ github.event_name }}
           path: coverage/
+
+      - name: Run linter
+        if: ${{matrix.os}} == "ubuntu-latest"
+        run: |
+          ./run_lint.sh
+
+      - name: Upload linter report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint_report.txt
+          path: ./lint_report.txt
 # TODO reenable it
 #      - name: Publish coverage reports
 #        uses: irongut/CodeCoverageSummary@v1.3.0
