@@ -22,6 +22,7 @@ Prerequisites = frozenset[ConcreteType]
 def requires(idx: TypeIndex, depending: ConcreteType, dependency: ConcreteType) -> bool:
     return dependency in idx.prerequisites(depending)
 
+
 class TypeIndexMixin:
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return frozenset(t for t in self.known_types() if is_concrete(t))
@@ -54,7 +55,6 @@ class GraphEdge(Enum):
     REQUIRES = "requires"
 
 
-
 @runtime_checkable
 class TypeIndex(Protocol):
 
@@ -77,7 +77,7 @@ class TypeIndex(Protocol):
     def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]: pass
 
     # todo untested
-    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot: pass
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot: pass
 
 
 @runtime_checkable
@@ -86,7 +86,6 @@ class TypeRegistry(HasLifecycle, Cloneable, Protocol):
 
     def remove(self, *t: Collectable[type]):
         '''raises UnknownTypesException'''
-
 
     #todo make this a property across the implementations
     def known_types(self) -> ImmutableTypeSet: pass

@@ -27,12 +27,13 @@ class TypeRegistryDelegateMixin:
     def type_index(self) -> TypeIndex:
         return self.registry.type_index()
 
+
 class TypeIndexUnion(TypeIndex):
     """
     This represents an union of indexes that refer to disjoint typesets. The indexes are browsed (and ordered)
     in the order passed to constructor.
     """
-    def __init__(self, indexes = Iterable[TypeIndex], names: Iterable[str]=None):
+    def __init__(self, indexes: Iterable[TypeIndex], names: Iterable[str] = None):
         self.indexes: tuple[TypeIndex, ...] = tuple(indexes)
         self.names: tuple[str, ...] = tuple(names) or tuple()
 
@@ -88,7 +89,7 @@ class TypeIndexUnion(TypeIndex):
         for i in self.indexes:
             yield from i.order(cyclic_resolver)
 
-    def graph(self, name: str="index", edges: set[GraphEdge] = None) -> Dot:
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot:
         result = Dot(graph_name=name, suppress_disconnected=True)
         for i, sub in enumerate(self.indexes):
             name = self.names[i] if i < len(self.names) else f"subindex{i}"

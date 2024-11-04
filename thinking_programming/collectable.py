@@ -6,6 +6,7 @@ __all__ = ["Collectable", "collect"]
 
 type Collectable[T] = T | Iterable[T]
 
+
 def collect[T](t: type[T], *collectable: Collectable[T]) -> Iterable[T]:
     for c in collectable:
         if isinstance(c, t):

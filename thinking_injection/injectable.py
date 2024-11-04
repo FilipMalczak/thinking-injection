@@ -14,4 +14,5 @@ class Injectable(Initializable, Protocol):
     def __init_subclass__(cls, **kwargs):
         discover(cls)
 
+
 InjectableType = type[Injectable]

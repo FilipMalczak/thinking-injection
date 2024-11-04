@@ -18,25 +18,27 @@ class ImplementationArity(Protocol):
         return self(impl_count)
 
     @classmethod
-    def of(cls, callable: Callable[[int], bool]) -> Self:
+    def of(cls, c: Callable[[int], bool]) -> Self:
         class Wrapper(ImplementationArity):
-            def __init__(self, c):
+            def __init__(self):
                 self.callable = c
 
             def __call__(self, i):
                 return self.callable(i)
-        return Wrapper(callable)
+        return Wrapper()
 
 
 EXACTLY_ONE = ImplementationArity.of(lambda x: x == 1)
 ZERO_OR_ONE = ImplementationArity.of(lambda x: x in [0, 1])
 ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
 
+
 class KindDefinition(NamedTuple):
     arity: ImplementationArity
     choose_implementations: Callable[[ImplementationDetails], TypeSet]
     matches_hint: Callable[[type], bool]
     unpack_hint: Callable[[type], type]
+
 
 class _Guard:
     @classmethod
@@ -53,8 +55,9 @@ class _Guard:
 
 def _ensure_single_type(types: Iterable[type]) -> type:
     out = list(types)
-    assert len(out) == 1 #todo msg
+    assert len(out) == 1 # todo msg
     return out[0]
+
 
 def _nonthrowing_isinstance(*args) -> bool:
     try:
@@ -63,13 +66,14 @@ def _nonthrowing_isinstance(*args) -> bool:
         return False
 
 
-def _guard_non_None[T](x: T) -> T:
+def _guard_non_none[T](x: T) -> T:
     assert x is not None
     return x
 
+
 class DependencyKind(Enum):
     # todo rename to REQUIRED or PRIMARY?
-    SIMPLE = KindDefinition(EXACTLY_ONE, lambda details: _guard_non_None(details.primary), lambda t: True, lambda t: t)
+    SIMPLE = KindDefinition(EXACTLY_ONE, lambda details: _guard_non_none(details.primary), lambda t: True, lambda t: t)
 
     OPTIONAL = KindDefinition(
         ZERO_OR_ONE,
@@ -79,9 +83,10 @@ class DependencyKind(Enum):
             x
             # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
             for x in Union[t, _Guard].__args__
-            if not x in (type(None), _Guard)
+            if x not in (type(None), _Guard)
         )
     )
+
     COLLECTIVE = KindDefinition(
         ANY_NUMBER,
         lambda details: set(details.implementations),
@@ -94,12 +99,15 @@ class DependencyKind(Enum):
         )
     )
 
+
 class Dependency(NamedTuple):
     name: str
     type_: type[AnyType]
     kind: DependencyKind
 
+
 Dependencies = frozenset[Dependency]
+
 
 def unpack_dependency(t: type) -> tuple[type, DependencyKind]:
     for kind in [DependencyKind.OPTIONAL, DependencyKind.COLLECTIVE, DependencyKind.SIMPLE]:

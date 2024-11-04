@@ -1,0 +1,20 @@
+strictness: medium
+test-warnings: false
+doc-warnings: false
+inherits:
+  - default
+  - full_pep8
+ignore-paths:
+  - calculator
+
+#fixme at some point we may wanna reenable pylint, but its an overkill for now
+pylint:
+  run: false
+
+pycodestyle:
+  disable:
+    - E261
+    - E262
+    - E265
+    - E701
+    - E704

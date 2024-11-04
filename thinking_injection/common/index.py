@@ -1,6 +1,7 @@
 from typing import Protocol, runtime_checkable, Any
 
 
+#fixme rethink this
 @runtime_checkable
 class TypeIndex[Graph: dict[type, Any]](Protocol):
     def register_type[T: type](self, t: T) -> set[type]:

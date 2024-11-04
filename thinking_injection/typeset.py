@@ -11,10 +11,13 @@ TypeSet = set[type]
 ImmutableTypeSet = frozenset[type]
 AnyTypeSet = TypeSet | ImmutableTypeSet
 
+
 TypeAliasing = dict[type, type]
+
 
 def types(*t: type) -> TypeSet:
     return set(*t)
+
 
 def from_package(pkg: ModuleNamePointer) -> TypeSet:
     pkg_name = ModuleName.resolve(pkg)
@@ -27,6 +30,7 @@ def from_package(pkg: ModuleNamePointer) -> TypeSet:
         if type_(t).defined_in_package(pkg_name)
     )
 
+
 def from_module(mod: ModuleNamePointer) -> TypeSet:
     mod_name = ModuleName.resolve(mod)
     assert not mod_name.module_descriptor.is_package# todo msg
@@ -36,6 +40,7 @@ def from_module(mod: ModuleNamePointer) -> TypeSet:
         for t in DISCOVERED_TYPES
         if ModuleName.resolve(t) == mod_name
     )
+
 
 def freeze(types: TypeSet) -> ImmutableTypeSet:
     return frozenset(types)

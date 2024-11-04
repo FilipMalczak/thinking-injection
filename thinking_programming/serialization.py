@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from types import GenericAlias, NoneType
-from typing import Self, Any, Callable, get_type_hints, TypeVar
+from typing import Self, Any, Callable, get_type_hints
 from uuid import UUID
 
 try:
@@ -10,6 +10,7 @@ try:
     NUMPY_FOUND = True
 except ModuleNotFoundError:
     NUMPY_FOUND = False
+
 
 RepresentationValue = str | int | float | bool | NoneType
 RepresentationContainer = dict[RepresentationValue, 'Representation'] | list['Representation']
@@ -19,6 +20,7 @@ Representation = dict[str, RepresentedField]
 
 NativelySerializableValue = RepresentationValue
 EasilySerializableValue = NativelySerializableValue | datetime | UUID
+
 
 SerializableContainer = dict[EasilySerializableValue, 'Serializable'] | list['Serializable']
 EasilySerializable = EasilySerializableValue | SerializableContainer
@@ -37,6 +39,7 @@ class CustomSerializable(ABC):
 
 Serializable = EasilySerializable | CustomSerializable
 
+
 def _serialize_dict(d: dict) -> Representation:
     out = {}
     for k, v in d.items():
@@ -44,12 +47,13 @@ def _serialize_dict(d: dict) -> Representation:
         out[serialize(k)] = serialize(v)
     return out
 
+
 SERIALIZERS = {
     datetime: lambda x: x.timestamp(),
     UUID: str,
     Enum: lambda x: x.name,
     CustomSerializable: lambda x: x.serialize(),
-    list: lambda l: list(map(serialize, l)),
+    list: lambda x: list(map(serialize, x)),
     dict: _serialize_dict
 }
 
@@ -61,9 +65,12 @@ DESERIALIZERS = {
     CustomSerializable: lambda c, v: c.deserialize(v)
 }
 
+
 if NUMPY_FOUND:
     SERIALIZERS[ndarray] = list
     DESERIALIZERS[ndarray] = lambda c, v: asarray(v)
+
+
 class SerializableMixin(CustomSerializable):
     def serialize(self) -> Representation:
         return self._enhance({
@@ -99,6 +106,7 @@ class SerializableMixin(CustomSerializable):
         }
         return t(**serial_data)
 
+
 class PolymorphicSerializableMixin(SerializableMixin):
     ID_TO_CLS = {}
 
@@ -125,6 +133,7 @@ class PolymorphicSerializableMixin(SerializableMixin):
         del data[PolymorphicSerializableMixin.TYPE_ID_FIELD]
         return data
 
+
 def serialize(o: Serializable) -> Representation:
     if isinstance(o, NativelySerializableValue):
         return o
@@ -133,8 +142,8 @@ def serialize(o: Serializable) -> Representation:
             return s(o)
     assert False, f"Cannot serialize {o} of type {type(o)}"
 
-T = TypeVar("T")
-def deserialize(o: Serializable, t: type[T]) -> T:
+
+def deserialize[T](o: Serializable, t: type[T]) -> T:
     if o is None or (not isinstance(t, GenericAlias) and isinstance(o, t)):
         return o
     if isinstance(o, list):
@@ -147,9 +156,9 @@ def deserialize(o: Serializable, t: type[T]) -> T:
                 return [deserialize(x, NativelySerializableValue) for x in o]
     if isinstance(o, dict):
         if isinstance(t, GenericAlias) and \
-            t.__origin__ == dict and \
-            len(t.__args__) == 2 and \
-            issubclass(t.__args__[0], EasilySerializableValue):
+                t.__origin__ == dict and \
+                len(t.__args__) == 2 and \
+                issubclass(t.__args__[0], EasilySerializableValue):
             return {
                 deserialize(k, t.__args__[0]): deserialize(v, t.__args__[1]) for k, v in o.items()
             }

@@ -29,15 +29,12 @@ jobs:
           bash ./install_develop.sh
       - name: Install requirements
         run: |
+          [ -f ./build-requirements.txt ] && pip install -r ./build-requirements.txt || echo "No build-requirements.txt found"
           [ -f ./requirements.txt ] && pip install -r ./requirements.txt || echo "No requirements.txt found"
           [ -f ./test-requirements.txt ] && pip install -r ./test-requirements.txt || echo "No test-requirements.txt found"
       - name: Run tests
         run: |
           python -m test.run_all
-          
-        
-      
-
       - name: Publish test report
         uses: dorny/test-reporter@v1
         if: success() || failure()

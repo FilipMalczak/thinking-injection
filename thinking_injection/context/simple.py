@@ -57,8 +57,6 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
                 self.target.reset()
 
 
-
-
 class SimpleIndex(InstanceIndex):
     def __init__(self, index: TypeIndex):
         assert index is not None #todo msg
