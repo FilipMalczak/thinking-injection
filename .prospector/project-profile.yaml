@@ -7,6 +7,9 @@ inherits:
 ignore-paths:
   - calculator
 
+#fixme at some point we may wanna reenable pylint, but its an overkill for now
+pylint:
+  run: false
 
 pycodestyle:
   disable:

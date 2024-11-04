@@ -47,6 +47,7 @@ class ConcreteClassMeta(type):
     def __subclasscheck__(cls, subclass):
         return is_concrete(subclass)
 
+
 class ConcreteClass(metaclass=ConcreteClassMeta): pass
 
 
@@ -71,7 +72,7 @@ assert isinstance(X, ConcreteType)
 
 
 @interface
-class I: pass
+class I: pass # noqa: E742
 
 
 assert is_interface(I)

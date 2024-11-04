@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from types import GenericAlias, NoneType
-from typing import Self, Any, Callable, get_type_hints, TypeVar
+from typing import Self, Any, Callable, get_type_hints
 from uuid import UUID
 
 try:
@@ -156,9 +156,9 @@ def deserialize[T](o: Serializable, t: type[T]) -> T:
                 return [deserialize(x, NativelySerializableValue) for x in o]
     if isinstance(o, dict):
         if isinstance(t, GenericAlias) and \
-                    t.__origin__ == dict and \
-                    len(t.__args__) == 2 and \
-                    issubclass(t.__args__[0], EasilySerializableValue):
+                t.__origin__ == dict and \
+                len(t.__args__) == 2 and \
+                issubclass(t.__args__[0], EasilySerializableValue):
             return {
                 deserialize(k, t.__args__[0]): deserialize(v, t.__args__[1]) for k, v in o.items()
             }

@@ -30,13 +30,14 @@ def specialized_configurator[T: type[ContextConfigurator]](p: type[Configuration
         return t
     return register
 
+
 def required_phase(configurator: ContextConfigurator) -> Optional[type[ConfigurationPhase]]:
     for c, p in SPECIALIZED_CONFIGURATOR_PHASES.items():
         # fixme not a clue why isinstance won't work here
         if issubclass(type(configurator), c):
-        # if isinstance(configurator, c):
             return p
     return None
+
 
 def declares_allowed_phase(configurator: ContextConfigurator) -> bool:
     required = required_phase(configurator)

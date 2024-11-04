@@ -4,9 +4,11 @@ from thinking_injection.interfaces import ConcreteType
 
 TypeComparator = Callable[[ConcreteType, ConcreteType], int]
 
+
 class TypeOrder(NamedTuple):
     before: ConcreteType
     after: ConcreteType
+
 
 class CyclicResolver:
     def __init__(self):
@@ -27,7 +29,9 @@ class CyclicResolver:
         else:
             assert False, f"Cannot resolve order, add a rule for {t1} and {t2}" #todo better msg
 
+
 Requires = Callable[[ConcreteType, ConcreteType], bool]
+
 
 def requirement_comparator(requires: Requires, cyclic_resolver: TypeComparator) -> TypeComparator:
     def comparator(t1: ConcreteType, t2: ConcreteType) -> int:

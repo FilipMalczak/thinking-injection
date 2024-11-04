@@ -1,5 +1,4 @@
 from collections import namedtuple
-from typing import NamedTuple
 
 
 class Outcome: pass
