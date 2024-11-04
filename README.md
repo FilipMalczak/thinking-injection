@@ -1,10 +1,15 @@
 # thinking-injection
 
-[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![CI](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml)
-[![PyPI version](https://badge.fury.io/py/thinking-injection.svg)](https://badge.fury.io/py/thinking-injection)
-[![codecov](https://codecov.io/github/FilipMalczak/thinking-injection/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/github/FilipMalczak/thinking-injection)
-[![Lint](https://img.shields.io/badge/lint-prospector-blue)](./.prospector/project-profile.yaml)
+| |
+| --- |
+| [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) |
+| [![CI](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml) |
+| [![PyPI version](https://badge.fury.io/py/thinking-injection.svg)](https://pypi.org/project/thinking-injection/) |
+| [![Lint](https://img.shields.io/badge/lint-prospector-blue)](./.prospector/project-profile.yaml) |
+| [![codecov](https://codecov.io/gh/FilipMalczak/thinking-injection/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/gh/FilipMalczak/thinking-injection) *(master)* |
+| [![codecov](https://codecov.io/gh/FilipMalczak/thinking-injection/branch/develop/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/gh/FilipMalczak/thinking-injection/tree/develop) *(develop)* |
+
+
 
 
 
