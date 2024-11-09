@@ -1,6 +1,6 @@
 from typing import NamedTuple, Optional
 
-from thinking_injection.interfaces import ConcreteType
+from thinking_types.interfaces import ConcreteType
 from thinking_injection.typeset import ImmutableTypeSet
 
 

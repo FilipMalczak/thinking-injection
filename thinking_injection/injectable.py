@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Protocol, runtime_checkable
 
-from thinking_injection.discovery import discover
+from thinking_types.discovery import discover
 from thinking_injection.lifecycle import Initializable
 
 

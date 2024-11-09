@@ -1,6 +1,6 @@
 from typing import runtime_checkable
 
-from thinking_injection.discovery import discover
+from thinking_types.discovery import discover
 
 INTERFACES: set[type] = set()
 

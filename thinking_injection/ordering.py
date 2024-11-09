@@ -1,6 +1,6 @@
 from typing import Callable, NamedTuple, Self
 
-from thinking_injection.interfaces import ConcreteType
+from thinking_types.interfaces import ConcreteType
 
 TypeComparator = Callable[[ConcreteType, ConcreteType], int]
 

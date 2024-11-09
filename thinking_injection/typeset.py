@@ -4,7 +4,7 @@ from thinking_modules.definitions import type_
 from thinking_modules.model import ModuleName, ModuleNamePointer
 from thinking_modules.scan import scan
 
-from thinking_injection.discovery import DISCOVERED_TYPES
+from thinking_types.discovery import DISCOVERED_TYPES
 
 #todo all typesets should be immutable, remove distinction or rename TypeSet to MutableTypeSet + remove Immutable prefix
 TypeSet = set[type]

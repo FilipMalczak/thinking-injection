@@ -8,7 +8,7 @@ from pydot import Dot
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies
 from thinking_injection.common.index import TypeIndex
-from thinking_injection.interfaces import ConcreteType, is_concrete
+from thinking_types.interfaces import ConcreteType, is_concrete
 from thinking_injection.lifecycle import HasLifecycle
 from thinking_injection.ordering import TypeComparator, requirement_comparator, CyclicResolver
 from thinking_injection.typeset import ImmutableTypeSet

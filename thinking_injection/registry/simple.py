@@ -10,8 +10,8 @@ from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_injection.discovery import PrimaryImplementation
-from thinking_injection.interfaces import ConcreteType, is_concrete
+from thinking_types.discovery import PrimaryImplementation
+from thinking_types.interfaces import ConcreteType, is_concrete
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer

@@ -4,8 +4,8 @@ from thinking_tests.decorators import case
 
 from test.injection.fixtures import class_fixtures
 from test.util import assert_equal_dicts
-from thinking_injection.discovery import PrimaryImplementation
-from thinking_injection.interfaces import interface, is_concrete
+from thinking_types.discovery import PrimaryImplementation
+from thinking_types.interfaces import interface, is_concrete
 from thinking_injection.registry.protocol import TypeRegistry
 from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import from_module
