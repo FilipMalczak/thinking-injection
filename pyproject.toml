@@ -41,5 +41,5 @@ packages = [
     "thinking_injection.registry",
     "thinking_injection.registry.customizable",
     "thinking_programming",
-    "thinking_types"
+    "thinking_reflection"
 ]
