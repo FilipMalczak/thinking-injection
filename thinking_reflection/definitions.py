@@ -4,8 +4,8 @@ from typing import NamedTuple, Self
 
 from frozendict import frozendict
 
-from thinking_types.declarations import analyse_declaration
-from thinking_types.model import TypeDeclaration, AccessorType, MethodDeclaration
+from thinking_reflection.declarations import analyse_declaration
+from thinking_reflection.model import TypeDeclaration, AccessorType, MethodDeclaration
 
 
 class FieldDefinition(NamedTuple):

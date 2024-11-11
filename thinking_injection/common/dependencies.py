@@ -4,7 +4,7 @@ from types import GenericAlias
 from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
 
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_types.interfaces import AnyType
+from thinking_reflection.interfaces import AnyType
 from thinking_injection.typeset import TypeSet
 
 
@@ -120,7 +120,7 @@ def get_dependencies(t: type) -> Dependencies | None:
     try:
         inject_method = t.inject_requirements
     except AttributeError:
-        #non-injectable types have no dependencies
+        #non-injectable reflection have no dependencies
         #todo replace with protocol check instead of duck-typing?
         return frozenset()
     spec = getfullargspec(inject_method)

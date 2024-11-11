@@ -4,7 +4,7 @@ from typing import Callable, Optional
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls, \
     SettingDefaultPrimaries, ForcingPrimaries
 from thinking_injection.injectable import Injectable
-from thinking_types.interfaces import interface, ConcreteType
+from thinking_reflection.interfaces import interface, ConcreteType
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
 
 

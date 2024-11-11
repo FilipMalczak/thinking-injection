@@ -45,21 +45,3 @@ def get_source_scope(x) -> SourceScope:
     )
 
 FUNCTION_TYPE = type(get_source_scope)
-
-class A:
-    def foo(self): pass
-
-    def bar(self):
-        pass
-
-class B(A):
-    def bar(self, x): pass
-
-    def baz(self): ...
-
-#todo extract tests
-assert get_source_scope(A) == SourceScope(__file__, 49, 5)
-assert get_source_scope(A.foo) == SourceScope(__file__, 50, 1)
-assert get_source_scope(A.foo) in get_source_scope(A)
-assert get_source_scope(B.bar) not in get_source_scope(A)
-assert get_source_scope(B.baz) not in get_source_scope(A)

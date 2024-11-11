@@ -5,7 +5,7 @@ from typing import NamedTuple, Optional, reveal_type
 from pydot import frozendict
 from thinking_modules.model import ModuleName
 
-from thinking_types.source_scope import SourceScope, get_source_scope
+from thinking_reflection.source_scope import SourceScope, get_source_scope
 
 UNSUPPORTED = Enum("UnsupportedEnum", ["UNSUPPORTED"]).UNSUPPORTED
 

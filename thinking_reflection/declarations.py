@@ -7,10 +7,10 @@ from typing import NamedTuple, Optional, Protocol, runtime_checkable
 from frozendict import frozendict
 from thinking_runtime.bootstrap import bootstrap
 
-from thinking_types.descriptor_protocol import AnyDescriptor
-from thinking_types.inspect_mate import is_regular_method
-from thinking_types.model import FieldDeclaration, UNSUPPORTED, TypeDeclaration, MethodDeclaration
-from thinking_types.source_scope import get_source_scope, DescriptorSourceScope
+from thinking_reflection.descriptor_protocol import AnyDescriptor
+from thinking_reflection.inspect_mate import is_regular_method
+from thinking_reflection.model import FieldDeclaration, UNSUPPORTED, TypeDeclaration, MethodDeclaration
+from thinking_reflection.source_scope import get_source_scope, DescriptorSourceScope
 
 
 log = getLogger(__name__)
@@ -196,127 +196,3 @@ def analyse_declaration(t: type) -> TypeDeclaration:
         if a.can_analyse(t):
             return a.analyse(t)
     assert False # CommonAnalyser should have worked as a fallback
-
-class AProtocol(Protocol):
-    x: int
-    _y: str
-
-    def foo(self, a): pass
-
-    def _bar(self): pass
-
-    @abstractmethod
-    def baz(self): pass
-
-    @abstractmethod
-    def _boo(self): pass
-
-    @property
-    def a(self): pass
-
-    @property
-    def _b(self) -> str: pass
-
-    @_b.setter
-    def _b(self, x: bool): pass
-
-    @property
-    @abstractmethod
-    def c(self) -> str: pass
-
-    @property
-    @abstractmethod
-    def _d(self) -> int: pass
-
-bootstrap()
-declaration = analyse_declaration(AProtocol)
-assert set(declaration.methods.keys()) == {"foo", "_bar", "baz", "_boo"}
-assert declaration.fields == frozendict({
-    "x": FieldDeclaration(int, int),
-    "_y": FieldDeclaration(str, str),
-    "a": FieldDeclaration(object, UNSUPPORTED),
-    "_b": FieldDeclaration(str, bool),
-    "c": FieldDeclaration(str, UNSUPPORTED),
-    "_d": FieldDeclaration(int, UNSUPPORTED)
-})
-
-class AnABC(ABC):
-    x: int
-    _y: str
-
-    def foo(self, a): pass
-
-    def _bar(self): pass
-
-    @abstractmethod
-    def baz(self): pass
-
-    @abstractmethod
-    def _boo(self): pass
-
-    @property
-    def a(self): pass
-
-    @property
-    def _b(self) -> str: pass
-
-    @_b.setter
-    def _b(self, x: bool): pass
-
-    @property
-    @abstractmethod
-    def c(self) -> str: pass
-
-    @property
-    @abstractmethod
-    def _d(self) -> int: pass
-
-declaration = analyse_declaration(AnABC)
-assert set(declaration.methods.keys()) == {"foo", "baz", "_boo"}
-assert declaration.fields == frozendict({
-    "x": FieldDeclaration(int, int),
-    "_y": FieldDeclaration(str, str),
-    "a": FieldDeclaration(object, UNSUPPORTED),
-    "c": FieldDeclaration(str, UNSUPPORTED),
-    "_d": FieldDeclaration(int, UNSUPPORTED)
-})
-
-class NormalClass:
-    x: int
-    _y: str
-
-    def foo(self, a): pass
-
-    def _bar(self): pass
-
-    @abstractmethod
-    def baz(self): pass
-
-    @abstractmethod
-    def _boo(self): pass
-
-    @property
-    def a(self): pass
-
-    @property
-    def _b(self) -> str: pass
-
-    @_b.setter
-    def _b(self, x: bool): pass
-
-    @property
-    @abstractmethod
-    def c(self) -> str: pass
-
-    @property
-    @abstractmethod
-    def _d(self) -> int: pass
-
-declaration = analyse_declaration(NormalClass)
-assert set(declaration.methods.keys()) == {"foo", "baz"}
-assert declaration.fields == frozendict({
-    "x": FieldDeclaration(int, int),
-    "a": FieldDeclaration(object, UNSUPPORTED),
-    "c": FieldDeclaration(str, UNSUPPORTED)
-})
-#todo extract tests

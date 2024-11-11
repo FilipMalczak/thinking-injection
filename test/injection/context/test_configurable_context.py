@@ -7,7 +7,7 @@ from thinking_injection.context.configurable.configurator import FallbacksProvid
     ForcedPrimaryImplementations
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.context.protocol import InstanceIndex
-from thinking_types.interfaces import interface, ConcreteType
+from thinking_reflection.interfaces import interface, ConcreteType
 
 
 @interface

@@ -3,7 +3,7 @@ from typing import Optional, Iterable, Self
 from pydot import Dot, Cluster
 
 from thinking_injection.common.dependencies import Dependencies
-from thinking_types.interfaces import ConcreteType, is_concrete
+from thinking_reflection.interfaces import ConcreteType, is_concrete
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.protocol import TypeRegistry, DiscoveredTypes, TypeIndex, Implementations, \
     Prerequisites, GraphEdge
