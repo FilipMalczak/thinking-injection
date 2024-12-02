@@ -1,7 +1,7 @@
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_reflection.source_scope import get_source_scope, SourceScope
+from thinking_reflection.model.source_scope import get_source_scope, SourceScope
 
 
 class A:

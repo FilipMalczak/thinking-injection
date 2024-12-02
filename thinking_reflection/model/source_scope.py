@@ -31,17 +31,30 @@ class DescriptorSourceScope(NamedTuple):
     getter: Optional[SourceScope]
     setter: Optional[SourceScope]
 
-def get_source_scope(x) -> SourceScope:
+def has_source(x) -> bool:
     if isbuiltin(x):
-        return None
+        return False
+
     t = type(x)
     if t.__module__ == "builtins" and t not in {type, FUNCTION_TYPE}:
+        return False
+
+    if t is object:
+        return False
+
+    return True
+
+def get_source_scope(x) -> Optional[SourceScope]:
+    if not has_source(x):
         return None
-    lines, first = getsourcelines(x)
-    return SourceScope(
-        getsourcefile(x),
-        first,
-        len(lines)
-    )
+    try:
+        lines, first = getsourcelines(x)
+        return SourceScope(
+            getsourcefile(x),
+            first,
+            len(lines)
+        )
+    except TypeError:
+        return None #todo check that message matches
 
 FUNCTION_TYPE = type(get_source_scope)

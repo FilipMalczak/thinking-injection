@@ -4,6 +4,8 @@ from thinking_reflection.discovery import discover
 
 INTERFACES: set[type] = set()
 
+def known_interfaces() -> frozenset[type]:
+    return frozenset(INTERFACES)
 
 def interface[T: type](t: T) -> T:
     try:
