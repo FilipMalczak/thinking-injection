@@ -5,10 +5,14 @@ from frozendict import frozendict
 from thinking_reflection.model.members import FieldDescriptor, MethodDescriptor
 
 def unique_concat[T](*ts: tuple[T, ...]) -> tuple[T, ...]:
+    yielded = set()
     def i():
         for t in ts:
-            yield from t
-    return tuple(set(i()))
+            for x in t:
+                if x not in yielded:
+                    yielded.add(x)
+                    yield x
+    return tuple(i())
 
 def unique_merge[T](d1: frozendict[str, tuple[T]], d2: frozendict[str, tuple[T]]) -> frozendict[str, tuple[T]]:
     out = dict(d1)

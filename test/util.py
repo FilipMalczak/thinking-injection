@@ -1,6 +1,12 @@
 from logging import getLogger
 from pprint import pformat
 
+from thinking_modules.model import ModuleName
+from thinking_tests import decorators
+from thinking_tests.fluent_decorator import fluent_decorator
+from thinking_tests.protocol import CaseCoordinates
+from thinking_tests.simple import SimpleThinkingCase
+
 
 #todo move to thinking-tests
 def assert_fails(l):
@@ -36,3 +42,21 @@ def assert_equal_dicts(expected, result):
                     log.error(f"\tExpected value: {pformat(expected_val)}")
                     log.error(f"\tResult value:   {pformat(result_val)}")
         raise
+
+@fluent_decorator
+def parametrized_case(name=None, *, params=None, setup=None, teardown=None):
+    def decorator(f):
+        nonlocal name, params, setup, teardown
+        params = params or tuple()
+        name = (name or f.__name__)+" // parameters: ("+(", ".join(str(x) for x in params))+")"
+        setup = setup or decorators.CURRENT_SETUP
+        teardown = teardown or decorators.CURRENT_TEARDOWN
+        case = SimpleThinkingCase(
+            CaseCoordinates(ModuleName.of(f), name, decorators._lineno(f)),
+            setup,
+            lambda: f(*params),
+            teardown
+        )
+        decorators.KNOWN_CASES.append(case)
+        return case
+    return decorator

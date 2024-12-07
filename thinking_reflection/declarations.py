@@ -2,6 +2,7 @@ from abc import ABC
 from collections.abc import Callable
 from inspect import signature, get_annotations, Signature, Parameter
 from logging import getLogger
+from types import NoneType
 from typing import NamedTuple, Optional, Protocol, runtime_checkable, Self
 
 from frozendict import frozendict
@@ -140,6 +141,17 @@ class BaseTypeAnalyser(TypeAnalyser):
     def _descriptor_filter(self, name: str, desc: AnyDescriptor) -> bool: pass
     def _annotation_filter(self, name: str, t: type) -> bool: pass
 
+    def _postprocess_signature(self, s: Signature) -> Signature:
+        ps = s.parameters
+        for k in ps:
+            p = ps[k]
+            if p.annotation is None:
+                p = Parameter(p.name, p.kind, default=p.default, annotation=NoneType)
+                ps[k] = p
+        if s.return_annotation is None:
+            s = Signature(ps.values(), return_annotation=NoneType, __validate_parameters__=False)
+        return s
+
     def analyse(self, subject: type) -> TypeDeclaration:
         fields = {}
         methods = {}
@@ -149,41 +161,43 @@ class BaseTypeAnalyser(TypeAnalyser):
         type_scope = get_source_scope(subject)
         if type_scope:
             for name in dir(subject):
-                log.info(f"Subject name: {name}")
+                log.debug(f"Subject name: {name}")
                 val = getattr(subject, name)
                 if is_regular_method(subject, name):
-                    log.info(f"{name} is a regular method")
+                    log.debug(f"{name} is a regular method")
                     try:
                         val_scope = get_source_scope(val)
                     except:
                         raise
-                    log.info(f"Scope: {val_scope}")
+                    log.debug(f"Scope: {val_scope}")
                     if val_scope in type_scope and self._method_filter(name, val):
-                        methods[name] = MethodDescriptor(signature(val), val_scope)
-                        log.info(f"Method: {methods[name]}")
+                        sig = signature(val)
+                        sig = self._postprocess_signature(sig)
+                        methods[name] = MethodDescriptor(sig, val_scope)
+                        log.debug(f"Method: {methods[name]}")
                     else:
-                        log.info(f"Ignoring ({val_scope in type_scope}, {self._method_filter(name, val)})")
+                        log.debug(f"Ignoring ({val_scope in type_scope}, {self._method_filter(name, val)})")
                 # descriptors override the annotation
                 elif isinstance(val, AnyDescriptor):
-                    log.info(f"{name} is a descriptor")
+                    log.debug(f"{name} is a descriptor")
                     for analyser in DESCRIPTOR_ANALYSERS:
                         if analyser.can_analyse(val):
                             desc_scope = analyser.get_source_scope(val)
                             if desc_scope:
-                                log.info(f"Scope: {desc_scope}")
+                                log.debug(f"Scope: {desc_scope}")
                                 if desc_scope in type_scope and self._descriptor_filter(name, val):
                                     fields[name] = analyser.analyse(val)
-                                    log.info(f"Field: {fields[name]}")
+                                    log.debug(f"Field: {fields[name]}")
                                     break
                                 else:
-                                    log.info(f"Ignoring ({desc_scope in type_scope}, {self._descriptor_filter(name, val)})")
+                                    log.debug(f"Ignoring ({desc_scope in type_scope}, {self._descriptor_filter(name, val)})")
                             else:
-                                log.info(f"No-source element {val}, ignoring")
+                                log.debug(f"No-source element {val}, ignoring")
                 else:
-                    log.info(f"Ignoring {name}")
+                    log.debug(f"Ignoring {name}")
                     pass #this explicitly ignores class-level fields
         else:
-            log.info(f"No-source subject {subject}, ignoring")
+            log.debug(f"No-source subject {subject}, ignoring")
         return TypeDeclaration(subject, frozendict(fields), frozendict(methods))
 
 class ProtocolAnalyser(BaseTypeAnalyser):

@@ -44,6 +44,7 @@ def has_source(x) -> bool:
 
     return True
 
+#todo make this a class method
 def get_source_scope(x) -> Optional[SourceScope]:
     if not has_source(x):
         return None
@@ -55,6 +56,8 @@ def get_source_scope(x) -> Optional[SourceScope]:
             len(lines)
         )
     except TypeError:
-        return None #todo check that message matches
+        return None #todo check that message matches ; this happens for builtins
+    except OSError:
+        return None #todo another "ignore exception" case; normalize it ; this happens in several cases; see inspect.findsource
 
 FUNCTION_TYPE = type(get_source_scope)
