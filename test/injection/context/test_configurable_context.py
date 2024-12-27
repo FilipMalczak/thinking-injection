@@ -138,44 +138,24 @@ def test_forcing_given_single_impl_and_fallback():
 
 
 @case
-def test_forcing_cannot_register_types_given_no_impls():
+def test_forcing_registers_impl_type_given_no_impls():
     ctx = ConfigurableContext([Proto, ProtoForcer])
-    reached = False
-    exc = None
-    try:
-        with ctx.lifecycle() as index:
-            reached = True
-    except BaseException as e:
-        exc = e
-    assert not reached
-    assert exc is not None
+    with ctx.lifecycle() as index:
+        assert isinstance(index.instance(Proto), Impl1)
+
 
 @case
-def test_forcing_cannot_register_types_given_single_impl():
+def test_forcing_registers_impl_typegiven_single_impl():
     ctx = ConfigurableContext([Proto, Impl2, ProtoForcer])
-    reached = False
-    exc = None
-    try:
-        with ctx.lifecycle() as index:
-            reached = True
-    except BaseException as e:
-        exc = e
-    assert not reached
-    assert exc is not None
+    with ctx.lifecycle() as index:
+        assert isinstance(index.instance(Proto), Impl1)
 
 
 @case
-def test_forcing_cannot_register_types_given_multiple_impl():
+def test_forcing_registers_impl_type_given_multiple_impl():
     ctx = ConfigurableContext([Proto, Impl2, Impl3, ProtoForcer])
-    reached = False
-    exc = None
-    try:
-        with ctx.lifecycle() as index:
-            reached = True
-    except BaseException as e:
-        exc = e
-    assert not reached
-    assert exc is not None
+    with ctx.lifecycle() as index:
+        assert isinstance(index.instance(Proto), Impl1)
 
 
 if __name__=="__main__":
