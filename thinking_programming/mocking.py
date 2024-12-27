@@ -1,24 +1,10 @@
-# from unittest.mock import Mock
-#
-# class X:
-#     a: int
-#
-# m = Mock()
-# m.x = Mock(spec_set=X)
-# m.x.a = 2
-# print(m.x)
-# print(m.x.a)
-# print(isinstance(m.x, X))
-# m.x.b = 3
 from abc import abstractmethod
 from collections import defaultdict
-from email.policy import default
 from enum import Enum, auto
 from functools import wraps
-from typing import Iterable, Optional, Protocol
-from unittest.mock import MagicMock, PropertyMock, Mock
+from typing import Iterable, Protocol, NamedTuple
+from unittest.mock import Mock
 
-from typing_extensions import NamedTuple
 
 from thinking_injection.context.configurable.configurator import specialized_configurator, ContextConfigurator
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls
