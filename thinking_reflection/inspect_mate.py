@@ -26,8 +26,8 @@ __author__ = "Sanhe Hu"
 __license__ = "MIT"
 
 
-import inspect
 import functools
+import inspect
 
 
 def is_attribute(klass, attr, value=None):

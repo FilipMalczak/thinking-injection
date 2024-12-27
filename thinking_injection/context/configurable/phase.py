@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from thinking_reflection.discovery import discover
 from thinking_injection.injectable import Injectable
+from thinking_reflection.discovery import discover
 from thinking_reflection.interfaces import interface
 
 

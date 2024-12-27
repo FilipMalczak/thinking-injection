@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Protocol
 
 from calc.operators.protocol import BinaryOperator
+
 from thinking_reflection.interfaces import interface
 
 

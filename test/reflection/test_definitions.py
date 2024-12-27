@@ -1,18 +1,14 @@
-from abc import ABC, abstractmethod
-from typing import Protocol, Optional
+from typing import Optional
 
 from frozendict import frozendict
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from test.reflection.test_definitions_by_matrix import DiscoveredClass, SimpleAbc, expected_fields, field_name, \
-    DefinitionKind, TypeKind, DiscoveredAbc, DiscoveredClassValue, DiscoveredAbcValue, SimpleAbcValue
-from thinking_injection.registry.simple import TypeDescriptor
+from test.reflection.test_definitions_by_matrix import DiscoveredClass, SimpleAbc, DiscoveredAbc, DiscoveredClassValue, \
+    DiscoveredAbcValue, SimpleAbcValue
 from thinking_reflection.definitions import TypeDefinition
-from thinking_reflection.discovery import discover
-from thinking_reflection.interfaces import interface
 from thinking_reflection.model.members import FieldDescriptor, MethodDescriptor
-from thinking_reflection.model.source_scope import SourceScope, get_source_scope
+from thinking_reflection.model.source_scope import get_source_scope
 
 
 class Clean: pass

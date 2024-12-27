@@ -1,8 +1,9 @@
-from typing import NamedTuple, Protocol, runtime_checkable, Self
+from typing import NamedTuple, Self
 
 from frozendict import frozendict
 
 from thinking_reflection.model.members import FieldDescriptor, MethodDescriptor
+
 
 def unique_concat[T](*ts: tuple[T, ...]) -> tuple[T, ...]:
     yielded = set()

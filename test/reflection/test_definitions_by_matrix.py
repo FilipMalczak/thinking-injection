@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
-from enum import Enum, auto
+from abc import ABC
+from enum import Enum
 from logging import getLogger
 from types import NoneType
-from typing import Protocol, Optional
+from typing import Protocol
 
 from frozendict import frozendict
-from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
 from test.util import parametrized_case

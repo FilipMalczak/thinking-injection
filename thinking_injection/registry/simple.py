@@ -10,8 +10,6 @@ from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_reflection.discovery import PrimaryImplementation
-from thinking_reflection.interfaces import ConcreteType, is_concrete
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer
@@ -20,6 +18,8 @@ from thinking_injection.registry.protocol import TypeIndex, Implementations, Pre
     TypeIndexMixin, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable, collect
+from thinking_reflection.discovery import PrimaryImplementation
+from thinking_reflection.interfaces import ConcreteType, is_concrete
 
 
 class TypeDescriptor(NamedTuple):

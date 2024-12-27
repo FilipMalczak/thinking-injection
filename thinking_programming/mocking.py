@@ -5,13 +5,13 @@ from functools import wraps
 from typing import Iterable, Protocol, NamedTuple
 from unittest.mock import Mock
 
-
 from thinking_injection.context.configurable.configurator import specialized_configurator, ContextConfigurator
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
 from thinking_reflection.definitions import TypeDefinition
 from thinking_reflection.interfaces import interface
 from thinking_reflection.model.members import UNSUPPORTED
+
 
 class GetSet(Enum):
     GET = auto()
@@ -118,21 +118,6 @@ class MockTypes(ContextConfigurator):
     def phase(self) -> ConfigurationPhase:
         return self._phase
 
-#todo cleanup this module
-
-class Foo:
-    x: int
-
-    def foo(self): pass
-
-class Bar(Protocol):
-    x: str
-
-    def baz(self, x: int) -> str: pass
-
-#
-class X(ReflectiveMock, mocked_types=[Foo, Bar]): pass
-
 #todo use collectable
 def mock_of(*t: type) -> type:
     class MockOf(ReflectiveMock, mocked_types=t): pass
@@ -140,6 +125,3 @@ def mock_of(*t: type) -> type:
 
 def mocked_property(mock, prop_name: str):
     return mock.__property_mocks__[prop_name]
-
-x = X()
-print(x.x)

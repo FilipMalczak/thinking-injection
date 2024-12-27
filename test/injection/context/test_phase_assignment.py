@@ -4,8 +4,8 @@ from thinking_tests.running.start import run_current_module
 from thinking_injection.context.configurable.configurator import ContextConfigurator, specialized_configurator
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.context.configurable.phase import ConfigurationPhase
-from thinking_reflection.interfaces import interface
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
+from thinking_reflection.interfaces import interface
 
 
 class SpecialPhase(ConfigurationPhase):

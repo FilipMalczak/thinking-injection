@@ -4,11 +4,11 @@ from thinking_tests.decorators import case
 
 from test.injection.fixtures import class_fixtures
 from test.util import assert_equal_dicts
-from thinking_reflection.discovery import PrimaryImplementation
-from thinking_reflection.interfaces import interface, is_concrete
 from thinking_injection.registry.protocol import TypeRegistry
 from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import from_module
+from thinking_reflection.discovery import PrimaryImplementation
+from thinking_reflection.interfaces import interface, is_concrete
 
 
 class Details(NamedTuple):

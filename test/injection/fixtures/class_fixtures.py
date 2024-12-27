@@ -2,10 +2,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import NamedTuple, Optional, Union
 
-from thinking_reflection.discovery import discover
 from thinking_injection.injectable import Injectable
-from thinking_reflection.interfaces import interface
 from thinking_injection.lifecycle import HasLifecycle, Initializable
+from thinking_reflection.discovery import discover
+from thinking_reflection.interfaces import interface
 
 
 @discover

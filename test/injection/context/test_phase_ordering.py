@@ -8,10 +8,10 @@ from thinking_injection.context.configurable.configurator import ContextConfigur
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls, \
     SettingDefaultPrimaries, ForcingPrimaries
-from thinking_reflection.discovery import discover
-from thinking_reflection.interfaces import ConcreteType, interface
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
 from thinking_injection.typeset import from_module
+from thinking_reflection.discovery import discover
+from thinking_reflection.interfaces import ConcreteType, interface
 
 ACCUMULATOR = []
 

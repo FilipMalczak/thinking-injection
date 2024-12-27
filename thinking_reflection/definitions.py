@@ -4,10 +4,10 @@ from lazy import lazy
 from pydot import frozendict
 from thinking_modules.immutable import Immutable
 
-from thinking_injection.typeset import types
 from thinking_reflection.declarations import TypeDeclaration
 from thinking_reflection.interfaces import known_interfaces
 from thinking_reflection.model.classes import unique_concat, TypeDescriptor
+
 
 def safe_issubclass(*args) -> bool:
     try:
