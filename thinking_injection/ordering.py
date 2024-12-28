@@ -47,7 +47,7 @@ def requirement_comparator(requires: Requires, cyclic_resolver: TypeComparator) 
                 # t2 should be initialized later than t1
                 return -1
             else:
-                # no dependency between reflection, order doesn't matter
+                # no dependency between types, order doesn't matter, but for the sake of determinism, lets order by name
                 # there's no way names are the same, so no 0 case
                 return -1 if t1.__qualname__ < t2.__qualname__ else 1
     return comparator

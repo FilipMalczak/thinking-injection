@@ -120,7 +120,7 @@ def get_dependencies(t: type) -> Dependencies | None:
     try:
         inject_method = t.inject_requirements
     except AttributeError:
-        #non-injectable reflection have no dependencies
+        #non-injectable types have no dependencies
         #todo replace with protocol check instead of duck-typing?
         return frozenset()
     spec = getfullargspec(inject_method)

@@ -67,7 +67,7 @@ class Analyser[A, T, D](Protocol):
 
 @runtime_checkable
 class DescriptorAnalyser[T: AnyDescriptor](Analyser[AnyDescriptor, T, FieldDescriptor], Protocol):
-    def get_source_scope(self, subject: AnyDescriptor) -> Optional[DescriptorSourceScope]: pass
+    def get_source_scope(self, subject: T) -> Optional[DescriptorSourceScope]: pass
 
 class PropertyAnalyser(DescriptorAnalyser[property]):
     def can_analyse(self, descriptor: AnyDescriptor) -> bool:
@@ -115,12 +115,6 @@ class IgnoringAnalyser(DescriptorAnalyser[AnyDescriptor]):
 
     def analyse(self, subject: AnyDescriptor) -> FieldDescriptor:
         raise NotImplementedError()
-#
-# def analyse_descriptor(desc: AnyDescriptor) -> FieldDescriptor:
-#     for a in DESCRIPTOR_ANALYSERS:
-#         if a.can_analyse(desc):
-#             return a.analyse(desc)
-#     assert False #todo
 
 def is_public(name):
     #dunder methods are public by default, since they indicate some protocol
@@ -165,10 +159,7 @@ class BaseTypeAnalyser(TypeAnalyser):
                 val = getattr(subject, name)
                 if is_regular_method(subject, name):
                     log.debug(f"{name} is a regular method")
-                    try:
-                        val_scope = get_source_scope(val)
-                    except:
-                        raise
+                    val_scope = get_source_scope(val)
                     log.debug(f"Scope: {val_scope}")
                     if val_scope in type_scope and self._method_filter(name, val):
                         sig = signature(val)
@@ -202,6 +193,7 @@ class BaseTypeAnalyser(TypeAnalyser):
 
 class ProtocolAnalyser(BaseTypeAnalyser):
     def can_analyse(self, subject: type) -> bool:
+        #protocols need to explicitly inherit from Protocol, so it need to be present in bases
         return Protocol in subject.__bases__
 
     def _annotation_filter(self, name: str, t: type) -> bool:

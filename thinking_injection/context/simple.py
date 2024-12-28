@@ -95,10 +95,7 @@ class SimpleIndex(InstanceIndex):
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
-        try:
-            instance = t()
-        except:
-            raise
+        instance = t()
         if issubclass(t, Injectable):
             return InitializableLifecycle(instance, lambda: self._inject_instance(t))
         if issubclass(t, HasLifecycle):

@@ -137,6 +137,7 @@ def test_forcing_given_single_impl_and_fallback():
         assert_context(index, Proto, Impl1, {Impl1})
 
 
+
 @case
 def test_forcing_registers_impl_type_given_no_impls():
     ctx = ConfigurableContext([Proto, ProtoForcer])
@@ -145,7 +146,7 @@ def test_forcing_registers_impl_type_given_no_impls():
 
 
 @case
-def test_forcing_registers_impl_typegiven_single_impl():
+def test_forcing_registers_impl_type_given_single_impl():
     ctx = ConfigurableContext([Proto, Impl2, ProtoForcer])
     with ctx.lifecycle() as index:
         assert isinstance(index.instance(Proto), Impl1)
@@ -157,6 +158,11 @@ def test_forcing_registers_impl_type_given_multiple_impl():
     with ctx.lifecycle() as index:
         assert isinstance(index.instance(Proto), Impl1)
 
+@case
+def test_forcing_doesnt_register_already_registered_impl_type():
+    ctx = ConfigurableContext([Proto, Impl1, Impl2, ProtoForcer])
+    with ctx.lifecycle() as index:
+        assert isinstance(index.instance(Proto), Impl1)
 
 if __name__=="__main__":
     run_current_module()

@@ -17,14 +17,19 @@ class GetSet(Enum):
     GET = auto()
     SET = auto()
 
+
 class InstanceAwarePropertyMock(NamedTuple):
     name: str
 
     def __get__(self, instance, owner):
-        return instance.__property_mocks__[self.name](GetSet.GET)
+        return mocked_property(instance, self.name)(GetSet.GET)
 
     def __set__(self, instance, value):
-        instance.__property_mocks__[self.name](GetSet.SET, value)
+        mocked_property(instance, self.name)(GetSet.SET, value)
+
+
+def mocked_property(mock, prop_name: str) -> InstanceAwarePropertyMock:
+    return mock.__property_mocks__[prop_name]
 
 
 class ReflectiveMock:
@@ -52,9 +57,7 @@ class ReflectiveMock:
 
             def _lazy_get(n: str):
                 if n not in self.__property_mock_values__:
-                    class YetAnotherMock(ReflectiveMock, mocked_types=props[n]): pass
-
-                    self.__property_mock_values__[n] = YetAnotherMock()
+                    self.__property_mock_values__[n] = reflective_mock(*props[n])()
                 return self.__property_mock_values__[n]
 
             def _make_side_effect(n):
@@ -76,11 +79,10 @@ class ReflectiveMock:
             setattr(cls, mn, Mock())
 
 
-
-#todo better signature
-def reflective_mock(*t: type) -> type:
+def reflective_mock(*t: type) -> type[ReflectiveMock]:
     class SpecializedReflectiveMock(ReflectiveMock, mocked_types=set(t)): pass
     return SpecializedReflectiveMock
+
 
 class Mocking(ConfigurationPhase):
     def __init__(self): pass
@@ -90,6 +92,7 @@ class Mocking(ConfigurationPhase):
         return "mocking"
 
     def inject_requirements(self, phase: AddingFallbackImpls): pass
+
 
 @interface
 @specialized_configurator(Mocking)
@@ -106,7 +109,7 @@ class MockTypes(ContextConfigurator):
         for t in to_be_mocked:
             #make the type an interface, so it wont ever get instantiated
             interface(t)
-            mocked = mock_of(t)
+            mocked = reflective_mock(t)
             impls = customizer.implementations[t]
             if not mocked in impls.all:
                 customizer.register(mocked)
@@ -117,11 +120,3 @@ class MockTypes(ContextConfigurator):
 
     def phase(self) -> ConfigurationPhase:
         return self._phase
-
-#todo use collectable
-def mock_of(*t: type) -> type:
-    class MockOf(ReflectiveMock, mocked_types=t): pass
-    return MockOf
-
-def mocked_property(mock, prop_name: str):
-    return mock.__property_mocks__[prop_name]
