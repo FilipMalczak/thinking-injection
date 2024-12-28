@@ -26,6 +26,8 @@ class TypeKind(Enum):
     PROTOCOL = "protocol"
     ABC = "abc"
 
+# d and t usually refer to definition and type, respecitvely
+
 def all_combinations():
     for d in DefinitionKind:
         for t in TypeKind:
@@ -317,10 +319,7 @@ for combination in all_combinations():
         for m_name in expected_method_names:
             v = m[m_name]
             assert isinstance(v, tuple)
-            try:
-                assert len(v) == 1
-            except:
-                raise
+            assert len(v) == 1
             assert isinstance(v[0], MethodDescriptor)
             v = v[0]
             if m_name == "foo123":
@@ -453,8 +452,6 @@ for combination in all_combinations():
                         else:
                             assert set(desc.signature.parameters.keys()) == {'self'}
                             assert desc.signature.return_annotation == str
-
-
 
 
 if __name__ == "__main__":
