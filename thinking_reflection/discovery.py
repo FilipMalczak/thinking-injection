@@ -10,6 +10,7 @@ def discover[T: type](t: T) -> T:
     DISCOVERED_TYPES.add(t)
     return t
 
+
 def known_types() -> frozenset[type]:
     return frozenset(DISCOVERED_TYPES)
 

@@ -109,7 +109,7 @@ class ForcedPrimaryImplementations(ContextConfigurator):
         assert forced  # todo msg; assert is type mapping
         for t, impl in forced.items():
             impls = customizer.implementations[t]
-            if not impl in impls.all:
+            if impl not in impls.all:
                 customizer.register(impl)
             impls.primary = impl
 

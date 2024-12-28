@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from enum import Enum, auto
 from functools import wraps
-from typing import Iterable, Protocol, NamedTuple
+from typing import Iterable, NamedTuple
 from unittest.mock import Mock
 
 from thinking_injection.context.configurable.configurator import specialized_configurator, ContextConfigurator
@@ -52,7 +52,7 @@ class ReflectiveMock:
         raw__init__ = cls.__init__
 
         @wraps(raw__init__)
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs): #todo ignore linter
             raw__init__(self, *args, **kwargs)
 
             def _lazy_get(n: str):
@@ -111,7 +111,7 @@ class MockTypes(ContextConfigurator):
             interface(t)
             mocked = reflective_mock(t)
             impls = customizer.implementations[t]
-            if not mocked in impls.all:
+            if mocked not in impls.all:
                 customizer.register(mocked)
             impls.primary = mocked
 

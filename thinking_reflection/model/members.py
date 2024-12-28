@@ -8,6 +8,7 @@ UNSUPPORTED = Enum("UnsupportedEnum", ["UNSUPPORTED"]).UNSUPPORTED
 
 AccessorType = Optional[type] | UNSUPPORTED
 
+
 class FieldDescriptor(NamedTuple):
     get_type: AccessorType
     set_type: AccessorType
@@ -18,6 +19,7 @@ class FieldDescriptor(NamedTuple):
             return self.get_type
         assert self.set_type is not UNSUPPORTED
         return self.set_type
+
 
 class MethodDescriptor(NamedTuple):
     signature: Signature

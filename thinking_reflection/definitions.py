@@ -17,6 +17,7 @@ def safe_issubclass(*args) -> bool:
         #todo I think I wrote it already
         return False
 
+
 class TypeSpecification(Immutable):
     this: TypeDeclaration
     nominal_supertypes: tuple[TypeDeclaration, ...]
@@ -56,6 +57,7 @@ class TypeSpecification(Immutable):
     def __add__(self, other) -> Self:
         assert isinstance(other, TypeSpecification) #todo msg
         return self.add(other)
+
 
 class TypeDefinition(NamedTuple):
     types: TypeSpecification

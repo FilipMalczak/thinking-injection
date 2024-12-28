@@ -26,10 +26,12 @@ class SourceScope(NamedTuple):
             return False
         return True
 
+
 class DescriptorSourceScope(NamedTuple):
     declaration: Optional[SourceScope]
     getter: Optional[SourceScope]
     setter: Optional[SourceScope]
+
 
 def has_source(x) -> bool:
     if isbuiltin(x):
@@ -43,6 +45,7 @@ def has_source(x) -> bool:
         return False
 
     return True
+
 
 #todo make this a class method
 def get_source_scope(x) -> Optional[SourceScope]:
@@ -59,5 +62,6 @@ def get_source_scope(x) -> Optional[SourceScope]:
         return None #todo check that message matches ; this happens for builtins
     except OSError:
         return None #todo another "ignore exception" case; normalize it ; this happens in several cases; see inspect.findsource
+
 
 FUNCTION_TYPE = type(get_source_scope)

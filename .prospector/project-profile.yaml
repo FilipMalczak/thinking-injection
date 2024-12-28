@@ -18,3 +18,4 @@ pycodestyle:
     - E265
     - E701
     - E704
+    - N807

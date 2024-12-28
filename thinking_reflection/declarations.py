@@ -16,14 +16,17 @@ from thinking_reflection.model.source_scope import get_source_scope, DescriptorS
 
 log = getLogger(__name__)
 
+
 def wrap_values[T, T2](d: frozendict[str, T], m: Callable[[T], T2]) -> frozendict[str, T2]:
     return frozendict({
         k: m(v)
         for k, v in d.items()
     })
 
+
 def _to_nonflat_tuple(x):
     return (x, )
+
 
 class TypeDeclaration(NamedTuple):
     raw_type: type
@@ -59,25 +62,30 @@ class TypeDeclaration(NamedTuple):
     def type_descriptor(self) -> TypeDescriptor:
         return TypeDescriptor(wrap_values(self.fields, _to_nonflat_tuple), wrap_values(self.methods, _to_nonflat_tuple))
 
+
 @runtime_checkable
 class Analyser[A, T, D](Protocol):
     def can_analyse(self, subject: A) -> bool: pass
 
     def analyse(self, subject: T) -> D: pass
 
+
 @runtime_checkable
 class DescriptorAnalyser[T: AnyDescriptor](Analyser[AnyDescriptor, T, FieldDescriptor], Protocol):
     def get_source_scope(self, subject: T) -> Optional[DescriptorSourceScope]: pass
+
 
 class PropertyAnalyser(DescriptorAnalyser[property]):
     def can_analyse(self, descriptor: AnyDescriptor) -> bool:
         return isinstance(descriptor, property)
 
     def get_source_scope(self, subject: AnyDescriptor) -> DescriptorSourceScope:
+
         def describe_source_scope(foo):
             if foo is not None:
                 return get_source_scope(foo)
             return None
+
         return DescriptorSourceScope(None, describe_source_scope(subject.fget), describe_source_scope(subject.fset))
 
     def analyse(self, descriptor: property) -> FieldDescriptor:
@@ -90,6 +98,7 @@ class PropertyAnalyser(DescriptorAnalyser[property]):
             if result is Signature.empty:
                 result = object
             return result
+
         def set_type():
             if descriptor.fset is None:
                 return UNSUPPORTED
@@ -106,6 +115,7 @@ class PropertyAnalyser(DescriptorAnalyser[property]):
             set_type()
         )
 
+
 class IgnoringAnalyser(DescriptorAnalyser[AnyDescriptor]):
     def can_analyse(self, subject: AnyDescriptor) -> bool:
         return True
@@ -116,11 +126,13 @@ class IgnoringAnalyser(DescriptorAnalyser[AnyDescriptor]):
     def analyse(self, subject: AnyDescriptor) -> FieldDescriptor:
         raise NotImplementedError()
 
+
 def is_public(name):
     #dunder methods are public by default, since they indicate some protocol
     #todo add __init__, __new__, etc sxclusion
     # see test_definitions.SimpleClass
     return not name.startswith("_") or (name.startswith("__") and not name.startswith("___"))
+
 
 def is_abstract(foo):
     try:
@@ -128,7 +140,9 @@ def is_abstract(foo):
     except AttributeError:
         return False
 
+
 class TypeAnalyser(Analyser[type, type, TypeDeclaration], Protocol): pass
+
 
 class BaseTypeAnalyser(TypeAnalyser):
     def _method_filter(self, name: str, foo: Callable) -> bool: pass
@@ -191,6 +205,7 @@ class BaseTypeAnalyser(TypeAnalyser):
             log.debug(f"No-source subject {subject}, ignoring")
         return TypeDeclaration(subject, frozendict(fields), frozendict(methods))
 
+
 class ProtocolAnalyser(BaseTypeAnalyser):
     def can_analyse(self, subject: type) -> bool:
         #protocols need to explicitly inherit from Protocol, so it need to be present in bases
@@ -205,6 +220,7 @@ class ProtocolAnalyser(BaseTypeAnalyser):
     def _descriptor_filter(self, name: str, desc: AnyDescriptor) -> bool:
         return True
 
+
 class ABCAnalyser(BaseTypeAnalyser):
     def can_analyse(self, subject: type) -> bool:
         return ABC in subject.__bases__
@@ -217,6 +233,7 @@ class ABCAnalyser(BaseTypeAnalyser):
 
     def _descriptor_filter(self, name: str, desc: AnyDescriptor) -> bool:
         return is_public(name) or is_abstract(desc)
+
 
 class CommonAnalyser(BaseTypeAnalyser):
     def can_analyse(self, subject: type) -> bool:
@@ -231,10 +248,12 @@ class CommonAnalyser(BaseTypeAnalyser):
     def _descriptor_filter(self, name: str, desc: AnyDescriptor) -> bool:
         return is_public(name)
 
+
 DESCRIPTOR_ANALYSERS: list[DescriptorAnalyser] = [
     PropertyAnalyser(),
     IgnoringAnalyser()
 ]
+
 
 TYPE_ANALYSERS: list[TypeAnalyser] = [
     ProtocolAnalyser(),
@@ -242,11 +261,14 @@ TYPE_ANALYSERS: list[TypeAnalyser] = [
     CommonAnalyser()
 ]
 
+
 def register_descriptor_analyser(t: type[DescriptorAnalyser]):
     DESCRIPTOR_ANALYSERS.insert(0, t())
 
+
 def register_type_analyser(t: type[TypeAnalyser]):
     TYPE_ANALYSERS.insert(0, t())
+
 
 def analyse_declaration(t: type) -> TypeDeclaration:
     for a in TYPE_ANALYSERS:

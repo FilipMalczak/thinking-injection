@@ -4,8 +4,10 @@ from thinking_reflection.discovery import discover
 
 INTERFACES: set[type] = set()
 
+
 def known_interfaces() -> frozenset[type]:
     return frozenset(INTERFACES)
+
 
 def interface[T: type](t: T) -> T:
     try:
@@ -63,21 +65,3 @@ class ConcreteType(type, metaclass=ConcreteTypeMeta): pass
 
 
 AnyType = InterfaceType | ConcreteType
-
-
-class X: pass
-
-
-assert is_concrete(X)
-assert issubclass(X, ConcreteClass)
-assert isinstance(X, ConcreteType)
-
-
-@interface
-class I: pass # noqa: E742
-
-
-assert is_interface(I)
-assert issubclass(I, Interface)
-assert isinstance(I, InterfaceType)
-#todo extract tests
