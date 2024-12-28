@@ -3,9 +3,9 @@ from thinking_tests.running.start import run_current_module
 
 from test.util import assert_equal_dicts
 from thinking_injection.injectable import Injectable
-from thinking_injection.interfaces import interface
 from thinking_injection.registry.protocol import TypeRegistry
 from thinking_injection.registry.simple import SimpleRegistry
+from thinking_reflection.interfaces import interface
 
 
 def reqs(registry: TypeRegistry) -> dict[type, frozenset[type]]:

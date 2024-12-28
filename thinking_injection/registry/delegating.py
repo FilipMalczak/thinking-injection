@@ -3,12 +3,12 @@ from typing import Optional, Iterable, Self
 from pydot import Dot, Cluster
 
 from thinking_injection.common.dependencies import Dependencies
-from thinking_injection.interfaces import ConcreteType, is_concrete
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.protocol import TypeRegistry, DiscoveredTypes, TypeIndex, Implementations, \
     Prerequisites, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable
+from thinking_reflection.interfaces import ConcreteType, is_concrete
 
 
 class TypeRegistryDelegateMixin:

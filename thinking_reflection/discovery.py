@@ -2,13 +2,17 @@ from typing import NamedTuple
 
 from bidict import bidict
 
-DISCOVERED_TYPES = set()
+DISCOVERED_TYPES: set[type] = set()
 
 
 def discover[T: type](t: T) -> T:
     assert isinstance(t, type), "Can only discover concrete types, generics are disallowed" #todo better msg
     DISCOVERED_TYPES.add(t)
     return t
+
+
+def known_types() -> frozenset[type]:
+    return frozenset(DISCOVERED_TYPES)
 
 
 class PrimaryImplementation[B: type, I: type](NamedTuple):

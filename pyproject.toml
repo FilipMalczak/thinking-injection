@@ -40,6 +40,7 @@ packages = [
     "thinking_injection.context.configurable",
     "thinking_injection.registry",
     "thinking_injection.registry.customizable",
-    "thinking_injection.context",
-    "thinking_programming"
+    "thinking_programming",
+    "thinking_reflection",
+    "thinking_reflection.model"
 ]

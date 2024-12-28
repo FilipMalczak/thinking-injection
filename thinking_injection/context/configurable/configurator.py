@@ -4,8 +4,8 @@ from typing import Callable, Optional
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls, \
     SettingDefaultPrimaries, ForcingPrimaries
 from thinking_injection.injectable import Injectable
-from thinking_injection.interfaces import interface, ConcreteType
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
+from thinking_reflection.interfaces import interface, ConcreteType
 
 
 @interface
@@ -109,7 +109,8 @@ class ForcedPrimaryImplementations(ContextConfigurator):
         assert forced  # todo msg; assert is type mapping
         for t, impl in forced.items():
             impls = customizer.implementations[t]
-            assert impl in impls.all #todo ditto as w/ defaults
+            if impl not in impls.all:
+                customizer.register(impl)
             impls.primary = impl
 
     def inject_requirements(self, phase: ForcingPrimaries):

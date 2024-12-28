@@ -1,7 +1,7 @@
 from calc.operators.protocol import BinaryOperator
 
-from thinking_injection.discovery import discover
 from thinking_injection.injectable import Injectable
+from thinking_reflection.discovery import discover
 
 
 @discover

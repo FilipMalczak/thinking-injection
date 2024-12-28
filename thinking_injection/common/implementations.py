@@ -1,7 +1,7 @@
 from typing import NamedTuple, Optional
 
-from thinking_injection.interfaces import ConcreteType
 from thinking_injection.typeset import ImmutableTypeSet
+from thinking_reflection.interfaces import ConcreteType
 
 
 #fixme leftover from past implementation; get rid of this

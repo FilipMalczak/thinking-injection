@@ -1,6 +1,6 @@
-from thinking_injection.discovery import discover
 from thinking_injection.injectable import Injectable
-from thinking_injection.interfaces import interface
+from thinking_reflection.discovery import discover
+from thinking_reflection.interfaces import interface
 
 
 @discover

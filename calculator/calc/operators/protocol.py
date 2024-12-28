@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Protocol
 
-from thinking_injection.interfaces import interface
+from thinking_reflection.interfaces import interface
 
 
 @interface

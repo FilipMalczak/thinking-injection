@@ -2,6 +2,7 @@ from typing import Iterable
 
 from calc.model.node import ExpressionNode, OperatorNode, ValueNode
 from calc.operators.protocol import BinaryOperator
+
 from thinking_injection.injectable import Injectable
 
 
