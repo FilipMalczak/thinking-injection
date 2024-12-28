@@ -149,6 +149,9 @@ def test_properties_that_get_mocked():
         assert owner.prop.some_method.mock_calls == [
             call()
         ]
+        #todo is this the correct behaviour? or maybe this should be the same mock as owner.prop?
+        the_property = index.instance(PropertyType)
+        assert the_property.some_method() == 2345
 
 if __name__ == "__main__":
     run_current_module()
