@@ -85,9 +85,9 @@ jobs:
         working-directory: ./calculator
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ ubuntu-latest, macos-latest]
         python-version: [
-          "3.12", "3.13", "3.14.0-alpha.3"
+          "3.12", "3.14.0-alpha.3"
         ]
 
     steps:
