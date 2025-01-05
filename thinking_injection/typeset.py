@@ -19,9 +19,22 @@ def types(*t: type) -> TypeSet:
     return set(*t)
 
 
+class InvalidModuleStyleException(Exception):
+    def __init__(self, mod_name, should_be_package, is_package):
+        self.mod_name = mod_name,
+        self.should_be_package = should_be_package
+        self.is_package = is_package
+        Exception.__init__(self, f"Module {mod_name} should{'' if should_be_package else 'n\'t'} be a package, "
+                                 f"but it in fact is{'' if is_package else 'n\'t'}")
+
+
 def from_package(pkg: ModuleNamePointer) -> TypeSet:
+    """
+    :raise InvalidModuleStyleException:
+    """
     pkg_name = ModuleName.resolve(pkg)
-    assert pkg_name.module_descriptor.is_package#todo msg
+    if not pkg_name.module_descriptor.is_package:
+        raise InvalidModuleStyleException(pkg_name, True, False)
     for m in scan(pkg_name):
         m.import_()
     return set(
@@ -32,8 +45,12 @@ def from_package(pkg: ModuleNamePointer) -> TypeSet:
 
 
 def from_module(mod: ModuleNamePointer) -> TypeSet:
+    """
+    :raise InvalidModuleStyleException:
+    """
     mod_name = ModuleName.resolve(mod)
-    assert not mod_name.module_descriptor.is_package# todo msg
+    if mod_name.module_descriptor.is_package:
+        raise InvalidModuleStyleException(mod_name, False, True)
     import_module(mod_name.qualified)
     return set(
         t

@@ -15,6 +15,7 @@ from thinking_injection.registry.protocol import TypeIndex
 from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import AnyTypeSet
 from thinking_programming.collectable import Collectable
+from thinking_programming.exceptions import NoneValueException
 
 
 @runtime_checkable
@@ -59,7 +60,7 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
 
 class SimpleIndex(InstanceIndex):
     def __init__(self, index: TypeIndex):
-        assert index is not None #todo msg
+        NoneValueException.guard(index)
         self.index = index #todo make private
         self._lifecycles = {}
         self._raw_manager = self._lifecyle_context_manager()

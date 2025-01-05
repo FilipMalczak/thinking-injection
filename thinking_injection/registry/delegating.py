@@ -8,6 +8,7 @@ from thinking_injection.registry.protocol import TypeRegistry, DiscoveredTypes, 
     Prerequisites, GraphEdge
 from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable
+from thinking_programming.exceptions import UnreachableInstructionException
 from thinking_reflection.interfaces import ConcreteType, is_concrete
 
 
@@ -63,7 +64,7 @@ class TypeIndexUnion(TypeIndex):
                 return i.prerequisites(t)
             except AssertionError: #fixme this will be dedicated exception at some point
                 pass
-        assert False
+        UnreachableInstructionException.guard()
 
     def known_types(self) -> ImmutableTypeSet:
         return frozenset([

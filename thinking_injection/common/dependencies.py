@@ -4,7 +4,9 @@ from types import GenericAlias
 from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
 
 from thinking_injection.common.implementations import ImplementationDetails
+from thinking_injection.exceptions import InvalidInjectionPointException
 from thinking_injection.typeset import TypeSet
+from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, UnreachableInstructionException
 from thinking_reflection.interfaces import AnyType
 
 
@@ -43,7 +45,7 @@ class KindDefinition(NamedTuple):
 class _Guard:
     @classmethod
     def _explain(cls):
-        assert False, "This type shouldn't be constructed nor subclassed, its only supposed to be used for resolving Unions"
+        UnreachableInstructionException.guard("This type shouldn't be constructed nor subclassed, its only supposed to be used for resolving Unions")
 
     def __init__(self):
         type(self)._explain()
@@ -54,8 +56,11 @@ class _Guard:
 
 
 def _ensure_single_type(types: Iterable[type]) -> type:
+    """
+    :raise WrongIterableSizeException:
+    """
     out = list(types)
-    assert len(out) == 1 # todo msg
+    WrongIterableSizeException.guard(out, 1)
     return out[0]
 
 
@@ -67,7 +72,10 @@ def _nonthrowing_isinstance(*args) -> bool:
 
 
 def _guard_non_none[T](x: T) -> T:
-    assert x is not None
+    """
+    :raise NoneValueException:
+    """
+    NoneValueException.guard(x)
     return x
 
 
@@ -113,10 +121,25 @@ def unpack_dependency(t: type) -> tuple[type, DependencyKind]:
     for kind in [DependencyKind.OPTIONAL, DependencyKind.COLLECTIVE, DependencyKind.SIMPLE]:
         if kind.value.matches_hint(t):
             return kind.value.unpack_hint(t), kind
-    assert False #todo msg  no enum matched
+    raise NotImplementedError(f"No dependency type matches packed dependency {t}")
+
+
+class NoDefaultForKwOnlyArgException(InvalidInjectionPointException):
+    def __init__(self, issues: list[str]):
+        self.issues: tuple[str, ...] = tuple(issues)
+        InvalidInjectionPointException.__init__(f"Some keyword-only arguments({issues}) have no default value")
+
+
+class UnannotatedNoDefaultPositionalArgException(InvalidInjectionPointException):
+    def __init__(self, issues: list[str]):
+        self.issues: tuple[str, ...] = tuple(issues)
+        InvalidInjectionPointException.__init__(f"Some arguments({issues}) have neither a default value nor an annotation")
 
 
 def get_dependencies(t: type) -> Dependencies | None:
+    """
+    :raise InvalidInjectionPointException:
+    """
     try:
         inject_method = t.inject_requirements
     except AttributeError:
@@ -128,17 +151,26 @@ def get_dependencies(t: type) -> Dependencies | None:
     # assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
     # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
     if spec.kwonlyargs:
-        assert spec.kwonlydefaults is not None
+        if spec.kwonlydefaults is None:
+            raise NoDefaultForKwOnlyArgException(spec.kwonlyargs)
+        missing = []
         for kwonly in spec.kwonlyargs:
-            assert kwonly in spec.kwonlydefaults, "All keyword-only arguments (*, args) of inject method must have defaults" #todo better msg
+            if kwonly not in spec.kwonlydefaults:
+                missing.append(kwonly)
+        if missing:
+            raise NoDefaultForKwOnlyArgException(missing)
     no_default_count = len(spec.args) - (len(spec.defaults) if spec.defaults is not None else 0)
     result = set()
+    missing = []
     for i, a in enumerate(spec.args):
         if i == 0:
             continue #skip self
         if i >= no_default_count:
-            assert a in spec.annotations, "Inject method arguments must either have defaults or annotations" #todo better msg
-        if a in spec.annotations:
+            if a not in spec.annotations:
+                missing.append(a)
+        if not missing and a in spec.annotations:
             t, kind = unpack_dependency(spec.annotations[a])
             result.add(Dependency(a, t, kind))
+    if missing:
+        raise UnannotatedNoDefaultPositionalArgException(missing)
     return frozenset(result)
