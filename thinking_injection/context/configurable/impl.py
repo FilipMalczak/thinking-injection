@@ -6,11 +6,11 @@ from typing import Optional
 from thinking_modules.model import ModuleName
 
 from thinking_injection.common.exceptions import UnknownTypesException
-from thinking_injection.context.configurable.configurator import ContextConfigurator, declares_allowed_phase, \
-    required_phase
+from thinking_injection.context.configurable.configurator import ContextConfigurator, ConfiguratorPhaseMismatchException
 from thinking_injection.context.configurable.phase import ConfigurationPhase
 from thinking_injection.context.protocol import ApplicationContext, InstanceIndex
 from thinking_injection.context.simple import SimpleContext
+from thinking_injection.exceptions import InvalidInternalTypeException
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.delegating import TypeIndexUnion
 from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex
@@ -57,10 +57,8 @@ class ConfiguredIndex(InstanceIndex):
                 if isinstance(instance, ConfigurationPhase):
                     ordered_phases.append(instance)
                 else:
-                    assert isinstance(instance, ContextConfigurator)
-                    assert declares_allowed_phase(instance), (f"Configurator {instance} declares phase "
-                                                              f"{instance.phase()} which doesn't match required "
-                                                              f"{required_phase(instance)} phase") #todo
+                    InvalidInternalTypeException.guard(instance, ContextConfigurator)
+                    ConfiguratorPhaseMismatchException.guard(instance)
                     configurator_per_phase[instance.phase()].append(instance)
             log.info(f"Ordered phases: {ordered_phases}")
             log.info("Customizers per phase:")

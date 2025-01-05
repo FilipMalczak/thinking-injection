@@ -3,8 +3,10 @@ from typing import Callable, Optional
 
 from thinking_injection.context.configurable.phase import ConfigurationPhase, AddingFallbackImpls, \
     SettingDefaultPrimaries, ForcingPrimaries
+from thinking_injection.exceptions import InvalidThinkingStateException, InvalidInternalTypeException
 from thinking_injection.injectable import Injectable
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer
+from thinking_programming.exceptions import NoneValueException
 from thinking_reflection.interfaces import interface, ConcreteType
 
 
@@ -24,7 +26,7 @@ SPECIALIZED_CONFIGURATOR_PHASES: dict[type, type[ConfigurationPhase]] = {}
 
 def specialized_configurator[T: type[ContextConfigurator]](p: type[ConfigurationPhase]) -> Callable[[T], T]:
     def register(t: T) -> T:
-        assert issubclass(t, ContextConfigurator) #ignore IDE warning, any @interface is @runtime_checkable
+        InvalidInternalTypeException.guard(t, ContextConfigurator)
         assert t not in SPECIALIZED_CONFIGURATOR_PHASES #todo msg
         SPECIALIZED_CONFIGURATOR_PHASES[t] = p
         return t
@@ -39,12 +41,27 @@ def required_phase(configurator: ContextConfigurator) -> Optional[type[Configura
     return None
 
 
-def declares_allowed_phase(configurator: ContextConfigurator) -> bool:
-    required = required_phase(configurator)
+def declares_allowed_phase(configurator: ContextConfigurator, required: type[ConfigurationPhase] = ConfigurationPhase) -> bool:
+    NoneValueException.guard(configurator)
+    NoneValueException.guard(required)
+    if required is ConfigurationPhase:
+        required = required_phase(configurator)
     if required is None:
         return True
     # fixme not a clue why isinstance won't work here
     return issubclass(type(configurator.phase()), required)
+
+
+class ConfiguratorPhaseMismatchException(InvalidThinkingStateException):
+    def __init__(self, instance: ContextConfigurator, expected_phase: type[ConfigurationPhase] | None):
+        self.instance = instance
+        self.expected_phase = expected_phase
+        InvalidThinkingStateException.__init__(self, f"Configurator {instance} should declare phase {expected_phase}, but declares {instance.phase()} instead")
+
+    @classmethod
+    def guard(cls, instance: ContextConfigurator, expected_phase: type[ConfigurationPhase] | None = ConfigurationPhase):
+        if not declares_allowed_phase(instance, expected_phase):
+            raise cls(instance, expected_phase)
 
 
 @interface
@@ -58,7 +75,7 @@ class FallbacksProvider(ContextConfigurator):
 
     def configure_context(self, customizer: TypeRegistryCustomizer):
         fallbacks = self.fallbacks()
-        assert fallbacks #todo msg; assert is type mapping
+        NoneValueException.guard(fallbacks) #todo assert is type mapping
         for i, impl in fallbacks.items():
             if not customizer.implementations[i].all:
                 customizer.register(impl)
@@ -81,7 +98,7 @@ class DefaultPrimaryImplementations(ContextConfigurator):
 
     def configure_context(self, customizer: TypeRegistryCustomizer):
         primaries = self.primaries()
-        assert primaries  # todo msg; assert is type mapping
+        NoneValueException.guard(primaries) # todo assert is type mapping
         for t, impl in primaries.items():
             impls = customizer.implementations[t]
             if impls.primary is None and len(impls.all) > 1:
@@ -106,7 +123,7 @@ class ForcedPrimaryImplementations(ContextConfigurator):
 
     def configure_context(self, customizer: TypeRegistryCustomizer):
         forced = self.forced()
-        assert forced  # todo msg; assert is type mapping
+        NoneValueException.guard(forced) #todo assert is type mapping
         for t, impl in forced.items():
             impls = customizer.implementations[t]
             if impl not in impls.all:

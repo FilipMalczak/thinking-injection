@@ -10,6 +10,7 @@ from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.common.implementations import ImplementationDetails
+from thinking_injection.exceptions import ConcreteTypeExpectedException, InvalidInternalTypeException
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer
@@ -72,6 +73,7 @@ class SimpleIndex(NamedTuple):
 
     @cache
     def prerequisites[T: type](self, t: T) -> Prerequisites:
+        #fixme these exceptions can bubble up in thinking_injection/registry/delegating.py:65
         requirements = set()
         if is_concrete(t):
             ds = self.dependencies(t)
@@ -93,7 +95,7 @@ class SimpleIndex(NamedTuple):
                     else:
                         requirements.add(impl)
         for r in requirements:
-            assert is_concrete(r)  # todo
+            ConcreteTypeExpectedException.guard(r)
         return frozenset(requirements)
 
     def known_types(self) -> ImmutableTypeSet:
@@ -164,7 +166,7 @@ class SimpleIndex(NamedTuple):
         return result
 
 
-assert issubclass(SimpleIndex, TypeIndex)
+InvalidInternalTypeException.guard(SimpleIndex, TypeIndex)
 
 
 class SimpleTypeImplementationsCustomizer(TypeImplementationsCustomizer):
@@ -295,4 +297,4 @@ class SimpleRegistry(CustomizableTypeRegistry):
         return SimpleRegistry({k: v.clone() for k, v in self.data.items()})
 
 
-assert issubclass(SimpleRegistry, CustomizableTypeRegistry)
+InvalidInternalTypeException.guard(SimpleRegistry, CustomizableTypeRegistry)

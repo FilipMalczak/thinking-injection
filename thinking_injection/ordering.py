@@ -1,5 +1,6 @@
 from typing import Callable, NamedTuple, Self
 
+from thinking_programming.exceptions import InvalidStateException
 from thinking_reflection.interfaces import ConcreteType
 
 TypeComparator = Callable[[ConcreteType, ConcreteType], int]
@@ -8,6 +9,13 @@ TypeComparator = Callable[[ConcreteType, ConcreteType], int]
 class TypeOrder(NamedTuple):
     before: ConcreteType
     after: ConcreteType
+
+
+class TypeOrderingException(InvalidStateException):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+        InvalidStateException.__init__(self, f"Cannot resolve ordering of {left} and {right} (hint: add CyclicResolver rule to cover this case)")
 
 
 class CyclicResolver:
@@ -22,12 +30,15 @@ class CyclicResolver:
         return self.left_before_right(t2, t1)
 
     def __call__(self, t1: ConcreteType, t2: ConcreteType) -> int:
+        """
+        :raise TypeOrderingException:
+        """
         if TypeOrder(t1, t2) in self.rules:
             return -1
         elif TypeOrder(t2, t1) in self.rules:
             return 1
         else:
-            assert False, f"Cannot resolve order, add a rule for {t1} and {t2}" #todo better msg
+            raise TypeOrderingException(t1, t2)
 
 
 Requires = Callable[[ConcreteType, ConcreteType], bool]
