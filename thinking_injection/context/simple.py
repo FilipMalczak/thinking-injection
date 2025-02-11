@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from contextlib import contextmanager
+from logging import getLogger
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
 
 from thinking_injection.cloneable import Cloneable
@@ -8,7 +9,7 @@ from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.context.protocol import InstanceIndex, ApplicationContext
 from thinking_injection.injectable import Injectable
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
-from thinking_injection.ordering import TypeComparator
+from thinking_injection.ordering import TypeComparator, CyclicResolver
 from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
 from thinking_injection.registry.delegating import TypeRegistryDelegateMixin
 from thinking_injection.registry.protocol import TypeIndex
@@ -16,6 +17,8 @@ from thinking_injection.registry.simple import SimpleRegistry
 from thinking_injection.typeset import AnyTypeSet
 from thinking_programming.collectable import Collectable
 from thinking_programming.exceptions import NoneValueException
+
+log = getLogger(__name__)
 
 
 @runtime_checkable
@@ -58,10 +61,11 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
                 self.target.reset()
 
 
-class SimpleIndex(InstanceIndex):
-    def __init__(self, index: TypeIndex):
+class SimpleInstanceIndex(InstanceIndex):
+    def __init__(self, index: TypeIndex, cyclic_resolver: CyclicResolver):
         NoneValueException.guard(index)
         self.index = index #todo make private
+        self.cyclic_resolver = cyclic_resolver
         self._lifecycles = {}
         self._raw_manager = self._lifecyle_context_manager()
 
@@ -77,7 +81,12 @@ class SimpleIndex(InstanceIndex):
     def _lifecyle_context_manager(self) -> ContextManager:
         try:
             lifecycles = []
-            for t in self.index.known_concrete_types():
+            # order = list(self.index.order(self.cyclic_resolver)) #todo
+            order = list(self.index.order())
+            log.info("Lifecycle ordering:")
+            for i, t in enumerate(order):
+                log.info(f"{i}: {t}")
+            for t in order:
                 lifecycle = self._make_lifecycle(t)
                 lifecycles.append(lifecycle)
                 self._lifecycles[t] = lifecycle
@@ -96,7 +105,10 @@ class SimpleIndex(InstanceIndex):
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
-        instance = t()
+        try:
+            instance = t()
+        except:
+            raise
         if issubclass(t, Injectable):
             return InitializableLifecycle(instance, lambda: self._inject_instance(t))
         if issubclass(t, HasLifecycle):
@@ -105,13 +117,15 @@ class SimpleIndex(InstanceIndex):
 
     def _to_target(self, d: Dependency):
         details = ImplementationDetails(self.index.implementations(d.type_), self.index.primary_implementation(d.type_))
-        chosen = d.kind.value.choose_implementations(details)
-        if d.kind == DependencyKind.COLLECTIVE: #todo externalize to dep kind or smth
-            return [
+        dep_kind = d.kind.value
+        chosen = dep_kind.choose_injected_types(details)
+        dep_kind.validate_injected_types(chosen)
+        instances = [
                 self._lifecycles[i].target
                 for i in chosen
             ]
-        return self._lifecycles[chosen].target
+        result = dep_kind.as_injected_value(instances)
+        return result
 
     def _inject_instance[T: type[Injectable]](self, t: T):
         instance: Injectable = self._lifecycles[t].target
@@ -126,13 +140,14 @@ class SimpleIndex(InstanceIndex):
         return self.index
 
 
-class SimpleContext(TypeRegistryDelegateMixin, ApplicationContext[SimpleIndex]):
+class SimpleContext(TypeRegistryDelegateMixin, ApplicationContext[SimpleInstanceIndex]):
     def __init__(self, typeset: AnyTypeSet = None, cyclic_resolver: TypeComparator = None):
         self.registry: CustomizableTypeRegistry = SimpleRegistry(typeset or [])
         self._cyclic_resolver = cyclic_resolver
 
-    def lifecycle(self) -> SimpleIndex:
-        return SimpleIndex(self.registry.type_index())
+    def lifecycle(self) -> SimpleInstanceIndex:
+        out = SimpleInstanceIndex(self.registry.type_index(), self._cyclic_resolver)
+        return out
 
     def remove(self, *t: Collectable[type]):
         self.registry.remove(*t)

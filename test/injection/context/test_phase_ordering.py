@@ -155,12 +155,13 @@ def test_phase_ordering():
     with ctx.lifecycle() as index:
         pass
     #order is based on phases order; that in turn is based on dependencies and qualified names ordering;
-    # e.g. AddingFallbackImpls is before EarlyPhase even though both are depencyless
+    # e.g. AddingFallbackImpls is before EarlyAction even though both are depencyless
     # still, order is deterministic
+    log.info(f"ACCUMULATOR {ACCUMULATOR}")
     assert ACCUMULATOR == [
         TracingFallbackProvider,
-        EarlyAction,
         AfterFallbacksAction,
+        EarlyAction,
         TracingEnforcer,
         TracingDefaultsProvider,
         AfterDefaultsAndForcingAction,

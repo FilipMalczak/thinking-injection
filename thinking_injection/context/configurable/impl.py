@@ -48,6 +48,7 @@ class ConfiguredIndex(InstanceIndex):
 
     @contextmanager
     def _both_contexts_lifecycle_manager(self):
+        log.info("Entering context of config index")
         with self.configurators_context.lifecycle() as config_index:
             self.configurators_index = config_index
             ordered_phases: list[ConfigurationPhase] = []
@@ -69,6 +70,7 @@ class ConfiguredIndex(InstanceIndex):
                 for configurator in configurator_per_phase[phase]:
                     log.info(f"Running {configurator}")
                     configurator.configure_context(customizer)
+            log.info("Entering context of business index")
             with self.business_context.lifecycle() as business_index:
                 self.business_index = business_index
                 yield

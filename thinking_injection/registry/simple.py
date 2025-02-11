@@ -1,9 +1,13 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cache
-from typing import NamedTuple, Optional, Self, Callable, Iterable
+from logging import getLogger
+from typing import NamedTuple, Optional, Self, Callable, Iterable, Any
 
 from frozendict import frozendict
+from networkx.algorithms.dag import topological_sort, lexicographical_topological_sort
+from networkx.classes import DiGraph
+from networkx.exception import NetworkXUnfeasible
 from pydot import Dot, Node, Edge
 
 from thinking_injection.cloneable import Cloneable
@@ -22,6 +26,7 @@ from thinking_programming.collectable import Collectable, collect
 from thinking_reflection.discovery import PrimaryImplementation
 from thinking_reflection.interfaces import ConcreteType, is_concrete
 
+log = getLogger(__name__)
 
 class TypeDescriptor(NamedTuple):
     dependencies: Dependencies
@@ -29,11 +34,14 @@ class TypeDescriptor(NamedTuple):
     primary: Optional[ConcreteType]
 
     def without(self, ts: set[type]) -> Self:
-        return TypeDescriptor(
+        p = self.primary if self.primary not in ts else None
+        # log.info(f"Pre {self}")
+        out = TypeDescriptor(
             frozenset(x for x in self.dependencies if x.type_ not in ts),
             frozenset(x for x in self.implementations if x not in ts),
-            self.primary if self.primary not in ts else None
+            p
         )
+        return out
 
 
 @dataclass
@@ -53,7 +61,7 @@ class MutableTypeDescriptor(Cloneable):
         return MutableTypeDescriptor(set(self.dependencies), set(self.implementations), self.forced_primary)
 
 
-class SimpleIndex(NamedTuple):
+class SimpleTypeIndex(NamedTuple):
     data: frozendict[type, TypeDescriptor]
 
     def dependencies[T: type](self, t: T) -> Dependencies:
@@ -74,26 +82,27 @@ class SimpleIndex(NamedTuple):
     @cache
     def prerequisites[T: type](self, t: T) -> Prerequisites:
         #fixme these exceptions can bubble up in thinking_injection/registry/delegating.py:65
-        requirements = set()
+        log.debug(f"Looking for prerequisites of {t}")
+        requirements: set[Any] = set()
         if is_concrete(t):
+            log.debug("Type is concrete, lets go forth")
             ds = self.dependencies(t)
+            log.debug(f"Its dependencies: {ds}")
             if ds is not None:
                 for d in ds:
+                    log.debug(f"\tLooking into dep {d}")
                     dep_type = d.type_
                     implementations = self.implementations(dep_type)
+                    log.debug(f"\tImpls: {implementations}")
                     primary = self.primary_implementation(dep_type)
+                    log.debug(f"Primary: {primary}")
                     details = ImplementationDetails(implementations, primary)
                     dep_kind = d.kind.value
-                    assert dep_kind.arity.matches(len(implementations))  # todo msg; fixme should actually check if primary is set or not too
-                    impl = dep_kind.choose_implementations(details)
-                    if d.kind == DependencyKind.COLLECTIVE:  # todo this should be externalized to kind too
-                        requirements.update(impl)
-                    # this and following could be simplified, but this is more descriptive
-                    elif d.kind == DependencyKind.OPTIONAL:
-                        if impl is not None:
-                            requirements.add(impl)
-                    else:
-                        requirements.add(impl)
+                    # assert dep_kind.arity.matches(len(implementations))  # todo msg; fixme should actually check if primary is set or not too
+                    # impl = dep_kind.choose_implementations(details)
+                    prereqs = dep_kind.choose_injected_types(details)
+                    dep_kind.validate_injected_types(prereqs)
+                    requirements.update(prereqs)
         for r in requirements:
             ConcreteTypeExpectedException.guard(r)
         return frozenset(requirements)
@@ -103,27 +112,57 @@ class SimpleIndex(NamedTuple):
 
     def without(self, *t: Collectable[type]) -> Self:
         ts = set(collect(type, *t))
-        return SimpleIndex(
+        out =  SimpleTypeIndex(
             frozendict({
                 k: v.without(ts)
                 for k, v in self.data.items()
                 if k not in ts
             })
         )
+        return out
 
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return TypeIndexMixin.known_concrete_types(self)
 
-    def least_requiring(self) -> frozenset[ConcreteType]:
-        return TypeIndexMixin.least_requiring(self)
+    # def least_requiring(self) -> frozenset[ConcreteType]:
+    #     return TypeIndexMixin.least_requiring(self)
 
-    def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
-        return TypeIndexMixin.order(self, cyclic_resolver)
+    def order(self) -> Iterable[ConcreteType]:
+        # edge X -> Y means "Y requires X" - the direction is reversed, because we want topological sort result to start with no-dependency types
+        graph = DiGraph()
+        current_idx = 0
+        type_to_idx: dict[ConcreteType, int] = {}
+        idx_to_type: list[ConcreteType] = []
+        # this can probably be done in a single loop, but let's optimize later
+        #todo optimize
+        for t in self.known_types():
+            type_to_idx[t] = current_idx
+            assert len(idx_to_type) == current_idx
+            idx_to_type.append(t)
+            graph.add_node(current_idx)
+            current_idx += 1
+        for t in self.known_concrete_types():
+            for prerequisite in self.prerequisites(t):
+                try:
+                    graph.add_edge(type_to_idx[prerequisite], type_to_idx[t])
+                except:
+                    raise
+        try:
+            for i in lexicographical_topological_sort(graph, key=lambda i: idx_to_type[i].__name__):
+                t = idx_to_type[i]
+                if is_concrete(t):
+                    yield t
+        except NetworkXUnfeasible:
+            raise # fixme specialize exception; this is thrown when there are cycles
+
+    # def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
+    #     return TypeIndexMixin.order(self, cyclic_resolver)
 
     @classmethod
     def build(cls, d: dict[type, TypeDescriptor] = None) -> Self:
         d = d or {}
-        return SimpleIndex(frozendict(d))
+        log.info(f"Building TypeIndex {d}")
+        return SimpleTypeIndex(frozendict(d))
 
     def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot:
         if edges is None:
@@ -166,7 +205,7 @@ class SimpleIndex(NamedTuple):
         return result
 
 
-InvalidInternalTypeException.guard(SimpleIndex, TypeIndex)
+InvalidInternalTypeException.guard(SimpleTypeIndex, TypeIndex)
 
 
 class SimpleTypeImplementationsCustomizer(TypeImplementationsCustomizer):
@@ -187,6 +226,10 @@ class SimpleTypeImplementationsCustomizer(TypeImplementationsCustomizer):
         #todo check invariants, like t implements this type or at least is concrete?
         self._descriptor.forced_primary = t
 
+    def __str__(self):
+        return f"{type(self).__name__}(all={self.all}, forcedPrimary={self._descriptor.forced_primary}, effectivePrimary={self.primary})"
+
+    __repr__ = __str__
 
 class SimpleImplementationsCustomizer(ImplementationsCustomizer):
     def __init__(self, registry: 'SimpleRegistry'):
@@ -261,34 +304,45 @@ class SimpleRegistry(CustomizableTypeRegistry):
                 if v.forced_primary == x:
                     v.forced_primary = None
         if unknowns:
+            #todo UnknownTypesException.guard(unknowns)
             raise UnknownTypesException("Cannot remove unknown types from type registry", unknowns)
 
     def known_types(self) -> ImmutableTypeSet:
         return frozenset(self.data.keys())
 
     def _figure_out_primary(self, t: type) -> Optional[ConcreteType]:
+        log.debug(f"No forced implementation for {t}, figuring primary out")
         assert t in self.data  # todo msg
         # if t in self.forced[t]:
         #     return self.forced[t]
         impls = self.data[t].implementations
         hint = PrimaryImplementation(t).get()
+        log.debug(f"Implementations: {impls}")
+        log.debug(f"Hint: {hint}")
         if hint is not None:
             if hint in impls:
+                log.debug(f"Returning hint {hint}")
                 return hint
         if len(impls) == 1:
             return list(impls)[0]
         if is_concrete(t):
             assert t in impls  # todo msg
+            log.debug(f"Returning sole implementation {t}")
             return t
         # if t in self.defaults:
         #     return self.defaults[t]
+        log.debug("No other option, returning None")
         return None
 
     def type_index(self) -> TypeIndex:
-        return SimpleIndex(frozendict({
+        log.debug("TypeRegistry to TypeIndex")
+        log.debug(f"Registry {self.data}")
+        out = SimpleTypeIndex(frozendict({
             t: desc.freeze(lambda: self._figure_out_primary(t))
             for t, desc in self.data.items()
         }))
+        log.debug(f"Index {out.data}")
+        return out
 
     def customizer(self) -> TypeRegistryCustomizer:
         return SimpleTypeRegistryCustomizer(self)

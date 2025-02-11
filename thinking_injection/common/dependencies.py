@@ -1,13 +1,14 @@
 from enum import Enum
 from inspect import getfullargspec
 from types import GenericAlias
-from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol
+from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol, Any
 
 from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.exceptions import InvalidInjectionPointException
 from thinking_injection.typeset import TypeSet
 from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, UnreachableInstructionException
-from thinking_reflection.interfaces import AnyType
+from thinking_programming.singleton import NastySingleton
+from thinking_reflection.interfaces import AnyType, ConcreteType
 
 
 class ImplementationArity(Protocol):
@@ -35,12 +36,6 @@ ZERO_OR_ONE = ImplementationArity.of(lambda x: x in [0, 1])
 ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
 
 
-class KindDefinition(NamedTuple):
-    arity: ImplementationArity
-    choose_implementations: Callable[[ImplementationDetails], TypeSet]
-    matches_hint: Callable[[type], bool]
-    unpack_hint: Callable[[type], type]
-
 
 class _Guard:
     @classmethod
@@ -55,13 +50,13 @@ class _Guard:
         cls._explain()
 
 
-def _ensure_single_type(types: Iterable[type]) -> type:
+def _guard_len_equals(types: Iterable[type], l: int) -> list[type]:
     """
     :raise WrongIterableSizeException:
     """
     out = list(types)
-    WrongIterableSizeException.guard(out, 1)
-    return out[0]
+    WrongIterableSizeException.guard(out, l)
+    return out
 
 
 def _nonthrowing_isinstance(*args) -> bool:
@@ -71,42 +66,127 @@ def _nonthrowing_isinstance(*args) -> bool:
         return False
 
 
-def _guard_non_none[T](x: T) -> T:
+#todo most likely unused
+def _guard_non_none[T](x: T, details: str) -> T:
     """
     :raise NoneValueException:
     """
-    NoneValueException.guard(x)
+    NoneValueException.guard(x, details)
     return x
+
+def flatten_types(*ts: type) -> list[type]:
+    return [
+        x
+        # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
+        for x in Union[*ts, _Guard].__args__
+        if x not in (type(None), _Guard)
+    ]
+
+class KindDefinition(NastySingleton):# todo make it abc
+    # arity: ImplementationArity #todo get rid of this
+
+    def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
+        """
+        Used when figuring out the prerequisites as well as when performing injection. Chooses which implementation(s)
+        to use.
+        """
+
+    def validate_injected_types(self, to_inject: list[ConcreteType]):
+        """
+        Called immediately after choose_injected_types; should raise some exception if there is an incorrect state (e.g.
+        any implementation was expected, but none were found, in case of simple dependency).
+        """
+    #todo get_injected_types = choose then validate
+
+    def as_injected_value(self, values_to_inject: list) -> Any:
+        """
+        Used when performing the injection. Expects to be passed any number of instances managed by the context
+        and should return the value to actually be injected. Core use case: return the first element for optional/simple
+        dependencies, but return the whole list for collective one.
+
+        Shouldn't do any validation - it will happen before we even touch instances, on the type choosing level;
+        validate_injected_types(type(x) for x in values_to_inject) is guaranteed to be True if this method is called
+        at all.
+        """
+
+    def matches_hint(self, t: type) -> bool:
+        """
+        Used when parsing the dependencies. Should return whether the given type (possibly an alias, like Optional or
+        list[...]) indicates the kind of dependency represented by self.
+        """
+
+    def unpack_hint(self, t: type) -> type:
+        """
+        Only called if matches_hint(t) == True; used to strip the metadata (like Optional[X], list[X], etc) to the
+        dependendency type (X, in mentioned examples).
+        """
+
+class SimpleDependency(KindDefinition):
+    # @property
+    # def arity(self) -> ImplementationArity: return EXACTLY_ONE
+
+    def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
+        return [ details.primary ]
+
+    def validate_injected_types(self, to_inject: list[ConcreteType]):
+        assert len(to_inject) == 1 #todo better exception
+
+    def as_injected_value(self, values_to_inject: list) -> Any:
+        return values_to_inject[0]
+
+    def matches_hint(self, t: type) -> bool:
+        return True
+
+    def unpack_hint(self, t: type) -> type:
+        return t
+
+class OptionalDependency(KindDefinition):
+    # @property
+    # def arity(self) -> ImplementationArity: return ZERO_OR_ONE
+
+    def choose_injected_types(self, details: ImplementationDetails) -> Any:
+        return [ details.primary ] if details.primary else []
+
+    def validate_injected_types(self, to_inject: list[ConcreteType]):
+        try:
+            assert len(to_inject) < 2 #todo better exception
+        except:
+            raise
+
+    def as_injected_value(self, values_to_inject: list) -> Any:
+        return values_to_inject[0] if values_to_inject else None
+
+    def matches_hint(self, t: type) -> bool:
+        return _nonthrowing_isinstance(None, t) # "type is optional" aka "None can be an instance of this type"
+
+    def unpack_hint(self, t: type) -> type:
+        return _guard_len_equals(flatten_types(t), 1)[0]
+
+class CollectiveDependency(KindDefinition):
+    # @property
+    # def arity(self) -> ImplementationArity: return ANY_NUMBER
+
+    def choose_injected_types(self, details: ImplementationDetails) -> Any:
+        return list(details.implementations)
+
+    def validate_injected_types(self, to_inject: list[ConcreteType]):
+        pass
+
+    def as_injected_value(self, values_to_inject: list) -> Any:
+        return values_to_inject
+
+    def matches_hint(self, t: type) -> bool:
+        # todo allow for sets next to lists
+        return isinstance(t, GenericAlias) and t.__origin__ == list
+
+    def unpack_hint(self, t: type) -> type:
+        return _guard_len_equals(flatten_types(*t.__args__), 1)[0]
 
 
 class DependencyKind(Enum):
-    # todo rename to REQUIRED or PRIMARY?
-    SIMPLE = KindDefinition(EXACTLY_ONE, lambda details: _guard_non_none(details.primary), lambda t: True, lambda t: t)
-
-    OPTIONAL = KindDefinition(
-        ZERO_OR_ONE,
-        lambda details: details.primary,
-        lambda t: _nonthrowing_isinstance(None, t), # "type is optional" aka "None can be instance of this type"
-        lambda t: _ensure_single_type(
-            x
-            # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
-            for x in Union[t, _Guard].__args__
-            if x not in (type(None), _Guard)
-        )
-    )
-
-    COLLECTIVE = KindDefinition(
-        ANY_NUMBER,
-        lambda details: set(details.implementations),
-        #todo allow for sets next to lists
-        lambda t: isinstance(t, GenericAlias) and t.__origin__ == list,
-        lambda t: _ensure_single_type(
-            x
-            for x in Union[*t.__args__, _Guard].__args__
-            if x is not _Guard
-        )
-    )
-
+    SIMPLE = SimpleDependency()
+    OPTIONAL = OptionalDependency()
+    COLLECTIVE = CollectiveDependency()
 
 class Dependency(NamedTuple):
     name: str

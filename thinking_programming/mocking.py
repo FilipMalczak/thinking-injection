@@ -2,6 +2,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from enum import Enum, auto
 from functools import wraps
+from logging import getLogger
 from typing import Iterable, NamedTuple
 from unittest.mock import Mock
 
@@ -12,6 +13,7 @@ from thinking_reflection.definitions import TypeDefinition
 from thinking_reflection.interfaces import interface
 from thinking_reflection.model.members import UNSUPPORTED
 
+log = getLogger(__name__)
 
 class GetSet(Enum):
     GET = auto()
@@ -33,6 +35,11 @@ def mocked_property(mock, prop_name: str) -> InstanceAwarePropertyMock:
 
 
 class ReflectiveMock:
+    def __init__(self):
+        """
+        Constructor must be empty, so that MRO stops looking into the supertypes; It will be replaced with Mock during __new__
+        """
+
     def __init_subclass__(cls, *, mocked_types: Iterable[type]):
         cls.mocked_types = frozenset(mocked_types)
         props: dict[str, set[type]] = defaultdict(set)
@@ -49,11 +56,18 @@ class ReflectiveMock:
             if UNSUPPORTED in x:
                 x.remove(UNSUPPORTED)
 
-        raw__init__ = cls.__init__
+        # raw__init__ = cls.__init__
 
-        @wraps(raw__init__)
-        def __init__(self, *args, **kwargs): #todo ignore linter
-            raw__init__(self, *args, **kwargs)
+        # @wraps(raw__init__)
+        # def __init__(self, *args, **kwargs): #todo ignore linter
+        def __new__(cls, *args, **kwargs): #todo ignore linter
+            # raw__init__(self, *args, **kwargs)
+            try:
+                self = object.__new__(cls, *args, **kwargs)
+            except TypeError:
+                #this isn't the best way to do this, but if we're mocking stuff like ints, we need to use __new__ other than
+                # from object; to be enhanced in the future
+                self = list(mocked_types)[0].__new__(cls, *args, **kwargs)
 
             def _lazy_get(n: str):
                 if n not in self.__property_mock_values__:
@@ -66,22 +80,60 @@ class ReflectiveMock:
                         return _lazy_get(n)
                 return _mock_side_effect
 
+            # InstanceAwarePropertyMock is a property (so, class-level field) that delegates the call to the
+            # __property_mocks__ value (dispatched over property name), adding the direction (GET/SET) parameter
+            # Value returned by GET will be a reflective mock (ReflectiveMock subclass) instance. It will be stored in
+            # __property_mock_values__.
+            #
+            # class X:
+            #     a: int
+            #     def foo(...): ...
+            # class Y:
+            #     x: X
+            #
+            # mock_type = reflective_mock(Y)
+            # mock = mock_type()
+            # mock_type.x is an InstanceAwarePropertyMock
+            # mock.__property_mocks__["x"] is an instance of Mock, with lazy side effect that constructs and caches mock for x
+            # mock.x is gonna be mock.__property_mock_values__["x"] and it will be an instance of ReflectiveMock
+            # mock.x.a will behave the same way - it will be an instance of ReflectiveMock for int type
+            # mock.x.foo will be Mock instance, specific to mock.x instance: mock_type().x.foo is not mock.x.foo
+            #
+            # to check whether the property has been accessed, you can do:
+            # mocked_property(mock, "x") which will give you the Mock instance, so you can check things like:
+            # mocked_property(mock, "x").assert_called_with(GET)
+            # notice that self is not passed to mocked_property(...), as the property mocks are per-instance
+
+            #todo describe methods, the fact that __init__ gets mocked too and that they are not present in the class
+            #itself, but are set per-instance (thus, self is present in calls to them)
+
             self.__property_mocks__ = {
                 pn: Mock(side_effect=_make_side_effect(pn))
                 for pn in props
             }
 
             self.__property_mock_values__ = {}
-        cls.__init__ = __init__
+            self.__init__ = Mock()
+
+            for mn in methods:
+                setattr(self, mn, Mock())
+
+            return self
+        # cls.__init__ = __init__
+        cls.__new__ = __new__
         for pn, pts in props.items():
             setattr(cls, pn, InstanceAwarePropertyMock(pn))
-        for mn in methods:
-            setattr(cls, mn, Mock())
+        # for mn in methods:
+        #     setattr(cls, mn, Mock())
 
 
-def reflective_mock(*t: type) -> type[ReflectiveMock]:
-    class SpecializedReflectiveMock(ReflectiveMock, mocked_types=set(t)): pass
-    return SpecializedReflectiveMock
+def reflective_mock(*t: type, name=None) -> type[ReflectiveMock]:
+    name = name or "ReflectiveMockOf_"+("__".join(x.__name__ for x in t))
+    bases = (ReflectiveMock, ) + t
+    out = type(name, bases, {}, mocked_types=set(t))
+    return out
+    # class SpecializedReflectiveMock(ReflectiveMock, *t, mocked_types=set(t)): pass
+    # return SpecializedReflectiveMock
 
 
 class Mocking(ConfigurationPhase):
@@ -107,13 +159,21 @@ class MockTypes(ContextConfigurator):
         to_be_mocked = self.mocks()
         assert to_be_mocked  # todo msg; assert is iterable mapping
         for t in to_be_mocked:
+            log.info(f"To be mocked: {t}")
             #make the type an interface, so it wont ever get instantiated
+            log.info("Ensuring its an interface")
             interface(t)
             mocked = reflective_mock(t)
+            log.info(f"Mocked type: {mocked}")
             impls = customizer.implementations[t]
+            log.info(f"Implementations: {impls}")
             if mocked not in impls.all:
+                log.info("Registering mocked type")
                 customizer.register(mocked)
+            log.info("Setting as a primary")
             impls.primary = mocked
+            log.info(f"Implementations after mocking: {impls}")
+
 
     def inject_requirements(self, phase: Mocking):
         self._phase = phase

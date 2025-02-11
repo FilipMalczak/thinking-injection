@@ -93,7 +93,8 @@ def test_collective_deps():
 
 @case
 def test_interesting():
-    assert get_dependencies(Interesting1) == {
+    result = get_dependencies(Interesting1)
+    expected = {
         Dependency("a", InjectableNoDeps, DependencyKind.SIMPLE),
         Dependency("b", InjectableOneValueDep, DependencyKind.OPTIONAL),
         Dependency("c", Impl2, DependencyKind.SIMPLE),
@@ -101,6 +102,10 @@ def test_interesting():
         Dependency("e", AnInterface, DependencyKind.COLLECTIVE),
         Dependency("f", Impl1, DependencyKind.COLLECTIVE)
     }
+    a = result - expected
+    b = expected - result
+    assert result == expected
 
 if __name__ == "__main__":
     run_current_module()
+    # test_interesting()

@@ -155,3 +155,5 @@ def test_properties_that_get_mocked():
 
 if __name__ == "__main__":
     run_current_module()
+    # test_2_levels_of_dependencies()
+    # test_properties_that_get_mocked()

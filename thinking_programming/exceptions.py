@@ -2,13 +2,13 @@ from typing import Iterable
 
 
 class NoneValueException(ValueError):
-    def __init__(self):
-        ValueError.__init__(self, "The argument is None")
+    def __init__(self, details: str | None = None):
+        ValueError.__init__(self, "The argument"+(" ("+details+")" if details else "")+" is None")
 
     @classmethod
-    def guard(cls, val):
+    def guard(cls, val, details: str | None = None):
         if val is None:
-            raise cls()
+            raise cls(details)
 
 
 class WrongIterableSizeException(ValueError):

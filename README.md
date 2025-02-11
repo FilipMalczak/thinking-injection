@@ -1,13 +1,13 @@
 # thinking-injection
 
-| |
-| --- |
-| [![thinking-framework](https://badgen.net/static/thinking/framework/lightgray?icon=github)](https://github.com/FilipMalczak/thinking-rationale) |
-| [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) |
-| [![CI](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipMalczak/thinking-injection/actions/workflows/ci.yml) |
-| [![PyPI version](https://badge.fury.io/py/thinking-injection.svg)](https://pypi.org/project/thinking-injection/) |
-| [![Lint](https://img.shields.io/badge/lint-prospector-blue)](./.prospector/project-profile.yaml) |
-| [![codecov](https://codecov.io/gh/FilipMalczak/thinking-injection/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/gh/FilipMalczak/thinking-injection) *(master)* |
+|                                                                                                                                                                                                     |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [![thinking-framework](https://badgen.net/static/thinking/framework/lightgray?icon=github)](https://github.com/FilipMalczak/thinking-rationale)                                                     |
+| [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)                                                                                                                      |
+| [![CI](https://github.com/FilipMalczak/thinking-injection/actions/workflows/on_commit.yml/badge.svg)](https://github.com/FilipMalczak/thinking-injection/actions/workflows/on_commit.yml)           |
+| [![PyPI version](https://badge.fury.io/py/thinking-injection.svg)](https://pypi.org/project/thinking-injection/)                                                                                    |
+| [![Lint](https://img.shields.io/badge/lint-prospector-blue)](./.prospector/project-profile.yaml)                                                                                                    |
+| [![codecov](https://codecov.io/gh/FilipMalczak/thinking-injection/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/gh/FilipMalczak/thinking-injection) *(master)*                              |
 | [![codecov](https://codecov.io/gh/FilipMalczak/thinking-injection/branch/develop/graph/badge.svg?token=X5HGHMQXAP)](https://codecov.io/gh/FilipMalczak/thinking-injection/tree/develop) *(develop)* |
 
 Pythonic DI for AI, as funny as it sounds.
