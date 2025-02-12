@@ -4,10 +4,12 @@ from logging import getLogger
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
 
 from thinking_injection.cloneable import Cloneable
-from thinking_injection.common.dependencies import Dependency, DependencyKind
+from thinking_injection.common.dependencies import Dependency, DependencyKind, KindDefinition
 from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.context.protocol import InstanceIndex, ApplicationContext
 from thinking_injection.injectable import Injectable
+from thinking_injection.invoker.contextful import ContextfulInvoker
+from thinking_injection.invoker.protocol import Invoker
 from thinking_injection.lifecycle import HasLifecycle, Resettable, composite_lifecycle
 from thinking_injection.ordering import TypeComparator, CyclicResolver
 from thinking_injection.registry.customizable.protocol import CustomizableTypeRegistry
@@ -65,8 +67,12 @@ class SimpleInstanceIndex(InstanceIndex):
     def __init__(self, index: TypeIndex, cyclic_resolver: CyclicResolver):
         NoneValueException.guard(index)
         self.index = index #todo make private
-        self.cyclic_resolver = cyclic_resolver
-        self._lifecycles = {}
+        self.cyclic_resolver = cyclic_resolver #todo get rid of this; with networkx we disallow circulars
+        self._lifecycles = { #todo injecting internals is untested
+            #todo we may wanna inject it by SimpleInstanceIndex/ContextfulInvoker too; besides, ConfigurableContext should inject smth else than this
+            InstanceIndex: ValueLifecycle(self),
+            Invoker: ValueLifecycle(ContextfulInvoker(self))
+        }
         self._raw_manager = self._lifecyle_context_manager()
 
     def __enter__(self):
@@ -96,6 +102,7 @@ class SimpleInstanceIndex(InstanceIndex):
             self._lifecycles.clear()
 
     def instance[T](self, t: type[T]) -> T:
+        #todo test "no instance for the type" cases
         primary_type = self.index.primary_implementation(t)
         if primary_type is None:
             return None
@@ -115,23 +122,24 @@ class SimpleInstanceIndex(InstanceIndex):
             return LifecycleDelegator(instance)
         return ValueLifecycle(instance)
 
-    def _to_target(self, d: Dependency):
-        details = ImplementationDetails(self.index.implementations(d.type_), self.index.primary_implementation(d.type_))
-        dep_kind = d.kind.value
-        chosen = dep_kind.choose_injected_types(details)
-        dep_kind.validate_injected_types(chosen)
+    def resolve_requirement(self, t: type, kind: DependencyKind | KindDefinition):
+        if isinstance(kind, DependencyKind):
+            kind = kind.value
+        details = ImplementationDetails(self.index.implementations(t), self.index.primary_implementation(t))
+        chosen = kind.choose_injected_types(details)
+        kind.validate_injected_types(chosen)
         instances = [
                 self._lifecycles[i].target
                 for i in chosen
             ]
-        result = dep_kind.as_injected_value(instances)
+        result = kind.as_injected_value(instances)
         return result
 
     def _inject_instance[T: type[Injectable]](self, t: T):
         instance: Injectable = self._lifecycles[t].target
         deps = self.index.dependencies(t)
         kwargs = {
-            d.name: self._to_target(d)
+            d.name: self.resolve_dependency(d)
             for d in deps
         }
         instance.inject_requirements(**kwargs)

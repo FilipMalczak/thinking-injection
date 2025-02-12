@@ -1,6 +1,7 @@
-from typing import Protocol, Optional, runtime_checkable, ContextManager
+from typing import Protocol, Optional, runtime_checkable, ContextManager, Any
 
 from thinking_injection.cloneable import Cloneable
+from thinking_injection.common.dependencies import DependencyKind, Dependency, KindDefinition
 from thinking_injection.lifecycle import HasLifecycle
 from thinking_injection.registry.protocol import TypeRegistry, TypeIndex
 from thinking_programming.collectable import Collectable
@@ -8,12 +9,16 @@ from thinking_programming.collectable import Collectable
 
 @runtime_checkable
 class InstanceIndex(ContextManager, Protocol):
-    def instance[T](self, t: type[T]) -> Optional[T]: pass
+    def instance[T](self, t: type[T]) -> Optional[T]: ...
 
-    def instances[T](self, t: type[T]) -> frozenset[T]: pass
+    def instances[T](self, t: type[T]) -> frozenset[T]: ...
 
-    def type_index(self) -> TypeIndex: pass
+    def type_index(self) -> TypeIndex: ...
 
+    def resolve_requirement(self, t: type, kind: DependencyKind | KindDefinition) -> Any: ...
+
+    def resolve_dependency(self, d: Dependency) -> Any:
+        return self.resolve_requirement(d.type_, d.kind)
 
 @runtime_checkable
 class ApplicationContext[ContextLifetime: InstanceIndex](TypeRegistry,
@@ -21,4 +26,4 @@ class ApplicationContext[ContextLifetime: InstanceIndex](TypeRegistry,
                                                          Cloneable,
                                                          Protocol):
     def remove(self, *t: Collectable[type]):
-        '''raises UnknownTypesException'''
+        '''raises UnknownTypesException''' #todo fix this docstring

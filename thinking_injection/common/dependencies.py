@@ -216,17 +216,11 @@ class UnannotatedNoDefaultPositionalArgException(InvalidInjectionPointException)
         InvalidInjectionPointException.__init__(f"Some arguments({issues}) have neither a default value nor an annotation")
 
 
-def get_dependencies(t: type) -> Dependencies | None:
+def get_function_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
     """
     :raise InvalidInjectionPointException:
     """
-    try:
-        inject_method = t.inject_requirements
-    except AttributeError:
-        #non-injectable types have no dependencies
-        #todo replace with protocol check instead of duck-typing?
-        return frozenset()
-    spec = getfullargspec(inject_method)
+    spec = getfullargspec(callable)
     #todo rethink these constraints
     # assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
     # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
@@ -254,3 +248,13 @@ def get_dependencies(t: type) -> Dependencies | None:
     if missing:
         raise UnannotatedNoDefaultPositionalArgException(missing)
     return frozenset(result)
+
+
+def get_type_dependencies(t: type) -> Dependencies:
+    try:
+        inject_method = t.inject_requirements
+    except AttributeError:
+        # non-injectable types have no dependencies
+        # todo replace with protocol check instead of duck-typing?
+        return frozenset()
+    return get_function_dependencies(inject_method)

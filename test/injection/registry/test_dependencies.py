@@ -3,7 +3,7 @@ from thinking_tests.running.start import run_current_module
 
 from test.injection.fixtures.class_fixtures import *
 from test.util import assert_fails
-from thinking_injection.common.dependencies import unpack_dependency, DependencyKind, get_dependencies, Dependency
+from thinking_injection.common.dependencies import unpack_dependency, DependencyKind, get_type_dependencies, Dependency
 
 
 @case
@@ -30,70 +30,70 @@ def test_collective_unpacking():
 
 @case
 def test_values_have_no_deps():
-    assert get_dependencies(str) == frozenset()
-    assert get_dependencies(int) == frozenset()
-    assert get_dependencies(SimpleClass) == frozenset()
-    assert get_dependencies(ANamedTuple) == frozenset()
-    assert get_dependencies(ADataclass) == frozenset()
+    assert get_type_dependencies(str) == frozenset()
+    assert get_type_dependencies(int) == frozenset()
+    assert get_type_dependencies(SimpleClass) == frozenset()
+    assert get_type_dependencies(ANamedTuple) == frozenset()
+    assert get_type_dependencies(ADataclass) == frozenset()
 
 @case
 def test_initializables_have_no_deps():
-    assert get_dependencies(HasLifecycleDuckTyped) == frozenset()
-    assert get_dependencies(HasLifecycleInheriting) == frozenset()
-    assert get_dependencies(SimpleInitializable) == frozenset()
+    assert get_type_dependencies(HasLifecycleDuckTyped) == frozenset()
+    assert get_type_dependencies(HasLifecycleInheriting) == frozenset()
+    assert get_type_dependencies(SimpleInitializable) == frozenset()
 
 @case
 def test_simple_deps():
-    assert get_dependencies(InjectableNoDeps) == set()
-    assert get_dependencies(InjectableOneValueDep) == {
+    assert get_type_dependencies(InjectableNoDeps) == set()
+    assert get_type_dependencies(InjectableOneValueDep) == {
         Dependency("val", SimpleClass, DependencyKind.SIMPLE)
     }
-    assert get_dependencies(InjectableOneConcreteDep) == {
+    assert get_type_dependencies(InjectableOneConcreteDep) == {
         Dependency("concrete", InjectableNoDeps, DependencyKind.SIMPLE)
     }
-    assert get_dependencies(InjectableTwoConcreteDep) == {
+    assert get_type_dependencies(InjectableTwoConcreteDep) == {
         Dependency("concrete1", InjectableNoDeps, DependencyKind.SIMPLE),
         Dependency("concrete2", InjectableOneConcreteDep, DependencyKind.SIMPLE),
     }
 
 @case
 def test_optional_deps():
-    assert get_dependencies(InjectableOptionalInjectableByTyping) == {
+    assert get_type_dependencies(InjectableOptionalInjectableByTyping) == {
         Dependency("optional", InjectableNoDeps, DependencyKind.OPTIONAL)
     }
-    assert get_dependencies(InjectableOptionalInjectableByOperator) == {
+    assert get_type_dependencies(InjectableOptionalInjectableByOperator) == {
         Dependency("optional", InjectableNoDeps, DependencyKind.OPTIONAL)
     }
-    assert get_dependencies(InjectableOptionalInjectableByUnion) == {
+    assert get_type_dependencies(InjectableOptionalInjectableByUnion) == {
         Dependency("optional", InjectableNoDeps, DependencyKind.OPTIONAL)
     }
 
-    assert get_dependencies(InjectableOptionalValueByTyping) == {
+    assert get_type_dependencies(InjectableOptionalValueByTyping) == {
         Dependency("optional", SimpleClass, DependencyKind.OPTIONAL)
     }
-    assert get_dependencies(InjectableOptionalValueByOperator) == {
+    assert get_type_dependencies(InjectableOptionalValueByOperator) == {
         Dependency("optional", SimpleClass, DependencyKind.OPTIONAL)
     }
-    assert get_dependencies(InjectableOptionalValueByUnion) == {
+    assert get_type_dependencies(InjectableOptionalValueByUnion) == {
         Dependency("optional", SimpleClass, DependencyKind.OPTIONAL)
     }
 
 
 @case
 def test_collective_deps():
-    assert get_dependencies(InjectableCollectiveByInterface) == {
+    assert get_type_dependencies(InjectableCollectiveByInterface) == {
         Dependency("x", AnInterface, DependencyKind.COLLECTIVE)
     }
-    assert get_dependencies(InjectableCollectiveByImpl1) == {
+    assert get_type_dependencies(InjectableCollectiveByImpl1) == {
         Dependency("x", Impl1, DependencyKind.COLLECTIVE)
     }
-    assert get_dependencies(InjectableCollectiveByImpl2) == {
+    assert get_type_dependencies(InjectableCollectiveByImpl2) == {
         Dependency("x", Impl2, DependencyKind.COLLECTIVE)
     }
 
 @case
 def test_interesting():
-    result = get_dependencies(Interesting1)
+    result = get_type_dependencies(Interesting1)
     expected = {
         Dependency("a", InjectableNoDeps, DependencyKind.SIMPLE),
         Dependency("b", InjectableOneValueDep, DependencyKind.OPTIONAL),

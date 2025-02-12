@@ -11,7 +11,7 @@ from networkx.exception import NetworkXUnfeasible
 from pydot import Dot, Node, Edge
 
 from thinking_injection.cloneable import Cloneable
-from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_dependencies, Dependency
+from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_type_dependencies, Dependency
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.common.implementations import ImplementationDetails
 from thinking_injection.exceptions import ConcreteTypeExpectedException, InvalidInternalTypeException
@@ -274,7 +274,7 @@ class SimpleRegistry(CustomizableTypeRegistry):
                 desc = self.data[x]
                 if is_concrete(x):
                     desc.implementations.add(x)
-                deps = get_dependencies(x)
+                deps = get_type_dependencies(x)
                 desc.dependencies = deps
                 for d in deps:
                     if d.kind != DependencyKind.OPTIONAL:
