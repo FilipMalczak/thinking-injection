@@ -1,5 +1,5 @@
 from logging import getLogger
-from os import removedirs
+from os import remove
 from os.path import exists
 
 from thinking_tests.decorators import case, setup
@@ -24,7 +24,7 @@ def setup_context():
         config = index.instance(TinyDBTestConfiguration)
         path = config.get_tinydb_parameters().path
         if exists(path):
-            removedirs(path)
+            remove(path)
     return {
         "ctx": ConfigurableContext([*from_package("thinking_executor")])
     }

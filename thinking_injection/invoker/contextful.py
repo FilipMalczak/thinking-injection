@@ -1,6 +1,6 @@
 from typing import NamedTuple, Callable, Any
 
-from thinking_injection.common.dependencies import get_function_dependencies
+from thinking_injection.common.dependencies import get_non_method_dependencies
 from thinking_injection.context.protocol import InstanceIndex
 from thinking_injection.invoker.protocol import Invoker
 
@@ -9,7 +9,7 @@ class ContextfulInvoker(NamedTuple):
     index: InstanceIndex
 
     def gather_arguments[**P, R](self, callable: Callable[P, R]) -> dict[str, Any]:
-        deps = get_function_dependencies(callable)
+        deps = get_non_method_dependencies(callable)
         result =  {
             d.name: self.index.resolve_dependency(d)
             for d in deps

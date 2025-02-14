@@ -216,7 +216,7 @@ class UnannotatedNoDefaultPositionalArgException(InvalidInjectionPointException)
         InvalidInjectionPointException.__init__(f"Some arguments({issues}) have neither a default value nor an annotation")
 
 
-def get_function_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
+def get_any_function_dependencies[**P, R](callable: Callable[P, R], *, skip_first_arg: bool) -> Dependencies:
     """
     :raise InvalidInjectionPointException:
     """
@@ -237,7 +237,7 @@ def get_function_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
     result = set()
     missing = []
     for i, a in enumerate(spec.args):
-        if i == 0:
+        if i == 0 and skip_first_arg:
             continue #skip self
         if i >= no_default_count:
             if a not in spec.annotations:
@@ -250,6 +250,19 @@ def get_function_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
     return frozenset(result)
 
 
+def get_non_method_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
+    """
+    :raise InvalidInjectionPointException:
+    """
+    return get_any_function_dependencies(callable, skip_first_arg=False)
+
+
+def get_method_dependencies[**P, R](callable: Callable[P, R]) -> Dependencies:
+    """
+    :raise InvalidInjectionPointException:
+    """
+    return get_any_function_dependencies(callable, skip_first_arg=True)
+
 def get_type_dependencies(t: type) -> Dependencies:
     try:
         inject_method = t.inject_requirements
@@ -257,4 +270,4 @@ def get_type_dependencies(t: type) -> Dependencies:
         # non-injectable types have no dependencies
         # todo replace with protocol check instead of duck-typing?
         return frozenset()
-    return get_function_dependencies(inject_method)
+    return get_method_dependencies(inject_method)

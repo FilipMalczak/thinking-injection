@@ -3,6 +3,8 @@ from contextlib import contextmanager
 from logging import getLogger
 from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
 
+from frozendict import frozendict
+
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependency, DependencyKind, KindDefinition
 from thinking_injection.common.implementations import ImplementationDetails
@@ -68,11 +70,12 @@ class SimpleInstanceIndex(InstanceIndex):
         NoneValueException.guard(index)
         self.index = index #todo make private
         self.cyclic_resolver = cyclic_resolver #todo get rid of this; with networkx we disallow circulars
-        self._lifecycles = { #todo injecting internals is untested
-            #todo we may wanna inject it by SimpleInstanceIndex/ContextfulInvoker too; besides, ConfigurableContext should inject smth else than this
-            InstanceIndex: ValueLifecycle(self),
-            Invoker: ValueLifecycle(ContextfulInvoker(self))
-        }
+        self._exposed_components = frozendict({
+            # todo we may wanna inject it by SimpleInstanceIndex/ContextfulInvoker too; besides, ConfigurableContext should inject smth else than this
+            InstanceIndex: self,  #todo injecting index is untested
+            Invoker: ContextfulInvoker(self)
+        })
+        self._lifecycles = {}
         self._raw_manager = self._lifecyle_context_manager()
 
     def __enter__(self):
@@ -102,6 +105,8 @@ class SimpleInstanceIndex(InstanceIndex):
             self._lifecycles.clear()
 
     def instance[T](self, t: type[T]) -> T:
+        if t in self._exposed_components:
+            return self._exposed_components[t]
         #todo test "no instance for the type" cases
         primary_type = self.index.primary_implementation(t)
         if primary_type is None:
@@ -109,6 +114,8 @@ class SimpleInstanceIndex(InstanceIndex):
         return self._lifecycles[primary_type].target
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
+        if t in self._exposed_components:
+            return frozenset([self._exposed_components[t]])
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
