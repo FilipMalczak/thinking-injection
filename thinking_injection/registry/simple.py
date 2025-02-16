@@ -146,6 +146,7 @@ class SimpleTypeIndex(NamedTuple):
                 try:
                     graph.add_edge(type_to_idx[prerequisite], type_to_idx[t])
                 except:
+                    print("PREREQ", prerequisite)
                     raise
         try:
             for i in lexicographical_topological_sort(graph, key=lambda i: idx_to_type[i].__name__):

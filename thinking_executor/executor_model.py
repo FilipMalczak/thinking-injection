@@ -6,6 +6,7 @@ from typing import NamedTuple, Union, Any, Callable, Self, Iterable
 
 from thinking_executor.data.tiny_schema import tiny_table
 from thinking_programming.serialization import SerializableMixin
+from thinking_programming.collectable import Collectable, collect
 
 TaskKey = Union[str, int]
 
@@ -26,20 +27,40 @@ _TrackingConstants = enum.Enum("_TrackingConstants", "DEFAULT_NAME")
 
 DEFAULT_NAME = _TrackingConstants.DEFAULT_NAME
 
-
+#todo test the algebra
 class Args(NamedTuple):
-    args: tuple[Any] = tuple()
+    args: tuple[Any, ...] = tuple()
     kwargs: dict[str, Any] = {}
 
     def invoke(self, f: Callable):
         return f(*self.args, **self.kwargs)
 
-    def __add__(self, other: Self) -> Self:
+    def without_kwargs(self, *names: Collectable[str]) -> Self:
+        collected = collect(str, names)
+        return Args(self.args, {k: v for k, v in self.kwargs.items() if k not in collected})
+
+    def add(self, other: Self) -> Self:
+        #todo exception, docs
         assert len(set(self.kwargs.keys()).intersection(set(other.kwargs.keys()))) == 0, "When adding two Args, keys of kwargs cannot overlap!"
         new_args = self.args + other.args
         new_kwargs = dict(self.kwargs)
         new_kwargs.update(other.kwargs)
         return Args(new_args, new_kwargs)
+
+    def __add__(self, other: Self) -> Self:
+        return self.add(other)
+
+    def with_overrides(self, other: Self) -> Self:
+        """
+        Similiar to add(), but if a keyword arg is present in both self and other, the value is taken from other.
+        """
+        return self.without_kwargs(other.kwargs.keys()).add(other)
+
+    def __lshift__(self, other: Self) -> Self:
+        return self.with_overrides(other)
+
+    def __rshift__(self, other: Self) -> Self:
+        return other.with_overrides(self)
 
     @staticmethod
     def of(*args, **kwargs):
@@ -49,7 +70,7 @@ class CoordinatePart(NamedTuple):
     key: TaskKey
     order: int
 
-    def to_coordinates(self) -> 'TaskCoordinates':
+    def as_coordinates(self) -> 'TaskCoordinates':
         return TaskCoordinates([self.key], [self.order], TaskType.STAGE)
 
 @dataclass
@@ -116,7 +137,7 @@ class TaskCoordinates(SerializableMixin):
         return TaskCoordinates(path, order, task_type)
 
     def __add__(self, other: CoordinatePart) -> Self:
-        c = other.to_coordinates()
+        c = other.as_coordinates()
         return TaskCoordinates(self.path + c.path, self.order + c.order, TaskType.STAGE)
 
 #todo proper test case
@@ -130,7 +151,7 @@ assert TaskCoordinates.parse("STEP:x/y/z/0/a@0/0/2/0/10") == TaskCoordinates(
 @dataclass
 class TaskExecutionRecord(SerializableMixin):
     coordinates: TaskCoordinates
-    session_id: uuid.UUID  #'thinking_executor.session_model.SessionId', but typing system goes bonkers because of circular import
+    session_id: uuid.UUID  #todo 'thinking_executor.session_model.SessionId', but typing system went bonkers because of circular import (may not be the case in this repo)
     session_no: int
     start: datetime
     finish: datetime

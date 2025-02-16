@@ -103,6 +103,32 @@ jobs:
         run: |
           ./test.sh
   
+    calculator:
+      runs-on: ${{ matrix.os }}
+      defaults:
+        run:
+          shell: bash
+          working-directory: ./clustering
+      strategy:
+        matrix:
+          os: [ ubuntu-latest, macos-latest]
+          python-version: [
+            "3.12"
+          ]
+
+      steps:
+        - uses: actions/checkout@v4
+        - name: Set up Python ${{ matrix.python-version }}
+          uses: actions/setup-python@v5
+          with:
+            python-version: ${{ matrix.python-version }}
+        - name: Install requirements
+          run: |
+            ./setup.sh
+        - name: Run E2E tests
+          run: |
+            ./test.sh
+  
 
   ##########################################
   # LINTING OF THE WHOLE CODEBASE

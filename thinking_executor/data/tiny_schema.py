@@ -25,7 +25,7 @@ def register(name: TableName, t: TableType):
     REVERSE_SCHEMA[t].append(name)
     log.debug(f"Table {name} registered")
 
-
+#todo default name based on type name
 def tiny_table[T](name: TableName) -> Callable[[T], T]:
     def decorator(t: T) -> T:
         register(name, t)

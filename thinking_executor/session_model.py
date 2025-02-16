@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import Self
 from uuid import UUID, uuid4
 
-from thinking_modules.immutable import Immutable
-from thinking_runtime.defaults.recognise_runtime import Runtime, RUNTIME, RuntimeMode
+from thinking_runtime.defaults.recognise_runtime import Runtime, RuntimeMode, current_runtime
 
 from thinking_executor.data.tiny_schema import tiny_table
 from thinking_executor.executor_model import TaskCoordinates
@@ -32,7 +31,7 @@ class RuntimeRecord(SerializableMixin):
 
 @dataclass
 class RuntimeSessionMetadata(SerializableMixin):
-    runtime: RuntimeRecord = field(default_factory=lambda: RuntimeRecord.of(RUNTIME))
+    runtime: RuntimeRecord = field(default_factory=lambda: RuntimeRecord.of(current_runtime()))
     hostname: str = field(default_factory=lambda: os.uname().nodename)
     pid: int = field(default_factory=os.getpid)
 
