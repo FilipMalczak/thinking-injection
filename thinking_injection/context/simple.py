@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from contextlib import contextmanager
 from logging import getLogger
-from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self
+from typing import runtime_checkable, Protocol, NamedTuple, ContextManager, Callable, Self, Optional, Any, Iterable
 
 from frozendict import frozendict
 
@@ -18,9 +18,9 @@ from thinking_injection.registry.customizable.protocol import CustomizableTypeRe
 from thinking_injection.registry.delegating import TypeRegistryDelegateMixin
 from thinking_injection.registry.protocol import TypeIndex
 from thinking_injection.registry.simple import SimpleRegistry
-from thinking_injection.typeset import AnyTypeSet
+from thinking_injection.typeset import AnyTypeSet, TypeSet
 from thinking_programming.collectable import Collectable
-from thinking_programming.exceptions import NoneValueException
+from thinking_programming.exceptions import NoneValueException, WrongIterableSizeException
 
 log = getLogger(__name__)
 
@@ -65,18 +65,62 @@ class InitializableLifecycle[T: HasLifecycle](NamedTuple):
                 self.target.reset()
 
 
+class _InstanceIndexLoopback(InstanceIndex):
+    __loopback_delegate__: InstanceIndex = None
+    __is_loopback__ = True
+
+    @property
+    def __delegate__(self) -> InstanceIndex:
+        result = type(self).__loopback_delegate__
+        NoneValueException.guard(result, "instance index loopback delegate")
+        return result
+
+    def instance[T](self, t: type[T]) -> Optional[T]:
+        return self.__delegate__.instance(t)
+
+    def instances[T](self, t: type[T]) -> frozenset[T]:
+        return self.__delegate__.instances(t)
+
+    def type_index(self) -> TypeIndex:
+        return self.__delegate__.type_index()
+
+    def resolve_requirement(self, t: type, kind: DependencyKind | KindDefinition) -> Any:
+        return self.__delegate__.resolve_requirement(t, kind)
+
+    def resolve_dependency(self, d: Dependency) -> Any:
+        return self.__delegate__.resolve_dependency(d)
+
+    #context management is handled by the actual delegate
+    def __enter__(self): ...
+    def __exit__(self, exc_type, exc_val, exc_tb): ...
+
+
+def _make_loopback() -> type[InstanceIndex]:
+    return type("InstanceIndexLoopback", (_InstanceIndexLoopback, ), {})
+
+
+def _find_loopback(types: Iterable[type]) -> type[_InstanceIndexLoopback]:
+    def _safe_is_loopback(x) -> bool:
+        try:
+            return x.__is_loopback__
+        except AttributeError:
+            return False
+    candidates = [ t for t in types if _safe_is_loopback(t) ]
+    WrongIterableSizeException.guard(candidates, 1) #todo add details
+    return candidates[0]
+
 class SimpleInstanceIndex(InstanceIndex):
     def __init__(self, index: TypeIndex, cyclic_resolver: CyclicResolver):
         NoneValueException.guard(index)
         self.index = index #todo make private
+        self._bind_loopback()
         self.cyclic_resolver = cyclic_resolver #todo get rid of this; with networkx we disallow circulars
-        self._exposed_components = frozendict({
-            # todo we may wanna inject it by SimpleInstanceIndex/ContextfulInvoker too; besides, ConfigurableContext should inject smth else than this
-            InstanceIndex: self,  #todo injecting index is untested
-            Invoker: ContextfulInvoker(self)
-        })
         self._lifecycles = {}
         self._raw_manager = self._lifecyle_context_manager()
+
+    def _bind_loopback(self):
+        loopback = _find_loopback(self.index.known_types())
+        loopback.__loopback_delegate__ = self
 
     def __enter__(self):
         self._raw_manager.__enter__()
@@ -104,9 +148,7 @@ class SimpleInstanceIndex(InstanceIndex):
         finally:
             self._lifecycles.clear()
 
-    def instance[T](self, t: type[T]) -> T:
-        if t in self._exposed_components:
-            return self._exposed_components[t]
+    def instance[T](self, t: type[T]) -> Optional[T]:
         #todo test "no instance for the type" cases
         primary_type = self.index.primary_implementation(t)
         if primary_type is None:
@@ -114,8 +156,6 @@ class SimpleInstanceIndex(InstanceIndex):
         return self._lifecycles[primary_type].target
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
-        if t in self._exposed_components:
-            return frozenset([self._exposed_components[t]])
         return frozenset(self._lifecycles[x].target for x in self.index.implementations(t))
 
     def _make_lifecycle[T: type](self, t: T) -> ObjectLifecycle[T]:
@@ -129,7 +169,7 @@ class SimpleInstanceIndex(InstanceIndex):
             return LifecycleDelegator(instance)
         return ValueLifecycle(instance)
 
-    def resolve_requirement(self, t: type, kind: DependencyKind | KindDefinition):
+    def resolve_requirement(self, t: type, kind: DependencyKind | KindDefinition) -> Any:
         if isinstance(kind, DependencyKind):
             kind = kind.value
         details = ImplementationDetails(self.index.implementations(t), self.index.primary_implementation(t))
@@ -156,9 +196,17 @@ class SimpleInstanceIndex(InstanceIndex):
 
 
 class SimpleContext(TypeRegistryDelegateMixin, ApplicationContext[SimpleInstanceIndex]):
+    #todo get rid of cyclic resolver
     def __init__(self, typeset: AnyTypeSet = None, cyclic_resolver: TypeComparator = None):
-        self.registry: CustomizableTypeRegistry = SimpleRegistry(typeset or [])
+        self.registry: CustomizableTypeRegistry = SimpleRegistry(self._enhanced_typeset(typeset))
         self._cyclic_resolver = cyclic_resolver
+
+    def _always_registered(self) -> TypeSet:
+        return {Invoker, ContextfulInvoker, InstanceIndex, _make_loopback()}
+
+    def _enhanced_typeset(self, typeset: AnyTypeSet) -> TypeSet:
+        #todo guard that no impl of index gets registered by consumers
+        return set(typeset or []).union(self._always_registered())
 
     def lifecycle(self) -> SimpleInstanceIndex:
         out = SimpleInstanceIndex(self.registry.type_index(), self._cyclic_resolver)

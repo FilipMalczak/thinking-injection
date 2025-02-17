@@ -9,7 +9,7 @@ from thinking_injection.common.exceptions import UnknownTypesException
 from thinking_injection.context.configurable.configurator import ContextConfigurator, ConfiguratorPhaseMismatchException
 from thinking_injection.context.configurable.phase import ConfigurationPhase
 from thinking_injection.context.protocol import ApplicationContext, InstanceIndex
-from thinking_injection.context.simple import SimpleContext
+from thinking_injection.context.simple import SimpleContext, _InstanceIndexLoopback
 from thinking_injection.exceptions import InvalidInternalTypeException
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.delegating import TypeIndexUnion
@@ -57,10 +57,11 @@ class ConfiguredIndex(InstanceIndex):
                 instance = config_index.instance(ct)
                 if isinstance(instance, ConfigurationPhase):
                     ordered_phases.append(instance)
-                else:
-                    InvalidInternalTypeException.guard(instance, ContextConfigurator)
+                elif isinstance(instance, ContextConfigurator):
                     ConfiguratorPhaseMismatchException.guard(instance)
                     configurator_per_phase[instance.phase()].append(instance)
+                else:
+                    log.debug(f"Not a configuration phase, nor a configurator: {instance}")
             log.info(f"Ordered phases: {ordered_phases}")
             log.info("Customizers per phase:")
             for k, v in configurator_per_phase.items():

@@ -98,6 +98,7 @@ class SimpleTypeIndex(NamedTuple):
                     log.debug(f"Primary: {primary}")
                     details = ImplementationDetails(implementations, primary)
                     dep_kind = d.kind.value
+                    #todo cleanup
                     # assert dep_kind.arity.matches(len(implementations))  # todo msg; fixme should actually check if primary is set or not too
                     # impl = dep_kind.choose_implementations(details)
                     prereqs = dep_kind.choose_injected_types(details)
@@ -146,7 +147,6 @@ class SimpleTypeIndex(NamedTuple):
                 try:
                     graph.add_edge(type_to_idx[prerequisite], type_to_idx[t])
                 except:
-                    print("PREREQ", prerequisite)
                     raise
         try:
             for i in lexicographical_topological_sort(graph, key=lambda i: idx_to_type[i].__name__):
@@ -286,10 +286,13 @@ class SimpleRegistry(CustomizableTypeRegistry):
         for newly_scanned in out:
             for already_scanned in self.data:
                 if already_scanned != newly_scanned:
-                    if is_concrete(newly_scanned) and issubclass(newly_scanned, already_scanned):
-                        self.data[already_scanned].implementations.add(newly_scanned)
-                    if is_concrete(already_scanned) and issubclass(already_scanned, newly_scanned):
-                        self.data[newly_scanned].implementations.add(already_scanned)
+                    try:
+                        if is_concrete(newly_scanned) and issubclass(newly_scanned, already_scanned):
+                            self.data[already_scanned].implementations.add(newly_scanned)
+                        if is_concrete(already_scanned) and issubclass(already_scanned, newly_scanned):
+                            self.data[newly_scanned].implementations.add(already_scanned)
+                    except:
+                        raise
         return frozenset(out)
 
     def remove(self, *t: Collectable[type]):

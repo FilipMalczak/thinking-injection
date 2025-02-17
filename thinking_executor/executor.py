@@ -18,6 +18,8 @@ from thinking_executor.session_model import ContextSessionPointer
 from thinking_injection.injectable import Injectable
 from thinking_programming.outcome import outcome_of, ToBeContinuedException, Success
 from thinking_programming.str import StrReprMixin
+from thinking_reflection.discovery import discover, PrimaryImplementation
+from thinking_reflection.interfaces import interface
 
 log = getLogger(__name__)
 
@@ -32,12 +34,13 @@ class ExecutionFrame(StrReprMixin):
     next_subtask_order: list[int]
     task_type: TaskType
 
-class ExecutorProtocol:
+@interface
+class TaskExecutor:
 
     #just for type hints
     def execute(self, task_key: TaskKey, task_body: Callable, task_type: TaskType, task_args: Args = None): pass
 
-class FluentExecutorMixin(ExecutorProtocol):
+class FluentExecutorMixin(TaskExecutor):
 
     def execute_step(self, step_key: TaskKey, step_body: Callable, step_args: Args = None):
         self.execute(step_key, step_body, TaskType.STEP, step_args)
@@ -71,7 +74,9 @@ class ExecutorDecoratorsMixin(FluentExecutorMixin):
 
         return decorator
 
-class TaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
+@discover
+@PrimaryImplementation(TaskExecutor)
+class SimpleTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
     def __init__(self):
         self.table: TinyDBTableWithSchema = None
         self.stack: list[ExecutionFrame] = None

@@ -21,11 +21,11 @@ def interface[T: type](t: T) -> T:
 
 
 def is_interface[T: type](t: T) -> bool:
-    return t in INTERFACES
+    return t is not None and t in INTERFACES
 
 
 def is_concrete[T: type](t: T) -> bool:
-    return not is_interface(t)
+    return t is not None and not is_interface(t)
 
 
 class InterfaceMeta(type):

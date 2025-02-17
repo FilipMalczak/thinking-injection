@@ -5,9 +5,10 @@ from thinking_injection.common.dependencies import DependencyKind, Dependency, K
 from thinking_injection.lifecycle import HasLifecycle
 from thinking_injection.registry.protocol import TypeRegistry, TypeIndex
 from thinking_programming.collectable import Collectable
+from thinking_reflection.interfaces import interface
 
 
-@runtime_checkable
+@interface
 class InstanceIndex(ContextManager, Protocol):
     def instance[T](self, t: type[T]) -> Optional[T]: ...
 
@@ -20,7 +21,7 @@ class InstanceIndex(ContextManager, Protocol):
     def resolve_dependency(self, d: Dependency) -> Any:
         return self.resolve_requirement(d.type_, d.kind)
 
-@runtime_checkable
+@interface
 class ApplicationContext[ContextLifetime: InstanceIndex](TypeRegistry,
                                                          HasLifecycle[ContextLifetime],
                                                          Cloneable,

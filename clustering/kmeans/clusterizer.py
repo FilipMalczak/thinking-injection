@@ -10,7 +10,7 @@ from kmeans.model import Vector
 from kmeans.vectors import Vectors
 from thinking_executor.data.tiny_schema import TinyDBTableWithSchema, tiny_table, Query
 from thinking_executor.data.tinydb import TinyDBLifecycle
-from thinking_executor.executor import TaskExecutor
+from thinking_executor.executor import SimpleTaskExecutor
 from thinking_injection.injectable import Injectable
 from thinking_programming.serialization import SerializableMixin
 
@@ -38,9 +38,9 @@ class Clusterizer(Injectable):
         self.vectors: Vectors = None
         self.centroids: TinyDBTableWithSchema = None
         self.assignments: TinyDBTableWithSchema = None
-        self.exec: TaskExecutor = None
+        self.exec: SimpleTaskExecutor = None
 
-    def inject_requirements(self, dataset: DatasetLoader, distance: Distance, vectors: Vectors, tiny: TinyDBLifecycle, exec: TaskExecutor) -> None:
+    def inject_requirements(self, dataset: DatasetLoader, distance: Distance, vectors: Vectors, tiny: TinyDBLifecycle, exec: SimpleTaskExecutor) -> None:
         self.points = dataset.data
         self.distance = distance
         self.vectors = vectors

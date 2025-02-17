@@ -1,18 +1,21 @@
 from typing import Callable
 
-from thinking_executor.executor import ExecutorDecoratorsMixin, TaskExecutor
+from thinking_executor.executor import ExecutorDecoratorsMixin, SimpleTaskExecutor
 from thinking_executor.executor_model import TaskKey, TaskType, Args
 from thinking_injection.injectable import Injectable
 from thinking_injection.invoker.protocol import Invoker
 from thinking_programming.str import StrReprMixin
+from thinking_reflection.discovery import discover
 
-#todo untested outside of example project
+
+#todo untested
+@discover
 class ContextfulTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
     def __init__(self):
         self.invoker: Invoker = None
-        self.executor: TaskExecutor = None
+        self.executor: SimpleTaskExecutor = None
 
-    def inject_requirements(self, invoker: Invoker, executor: TaskExecutor) -> None:
+    def inject_requirements(self, invoker: Invoker, executor: SimpleTaskExecutor) -> None:
         self.invoker = invoker
         self.executor = executor
 
