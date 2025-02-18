@@ -4,6 +4,8 @@ set -e
 
 #./setup.sh >/dev/null 2>/dev/null
 
+[ -f ./kmeans.json ] && rm ./kmeans.json || echo "DB not present"
+
 source ./venv/bin/activate >/dev/null 2>/dev/null
 
 export SMALL_DATASET=1
