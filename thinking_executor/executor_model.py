@@ -48,6 +48,7 @@ class Args(NamedTuple):
         return Args(new_args, new_kwargs)
 
     def __add__(self, other: Self) -> Self:
+        assert isinstance(other, Args)
         return self.add(other)
 
     def with_overrides(self, other: Self) -> Self:
@@ -57,9 +58,11 @@ class Args(NamedTuple):
         return self.without_kwargs(other.kwargs.keys()).add(other)
 
     def __lshift__(self, other: Self) -> Self:
+        assert isinstance(other, Args)
         return self.with_overrides(other)
 
     def __rshift__(self, other: Self) -> Self:
+        assert isinstance(other, Args)
         return other.with_overrides(self)
 
     @staticmethod
@@ -137,6 +140,7 @@ class TaskCoordinates(SerializableMixin):
         return TaskCoordinates(path, order, task_type)
 
     def __add__(self, other: CoordinatePart) -> Self:
+        assert isinstance(other, CoordinatePart)
         c = other.as_coordinates()
         return TaskCoordinates(self.path + c.path, self.order + c.order, TaskType.STAGE)
 
