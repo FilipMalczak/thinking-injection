@@ -56,6 +56,7 @@ class PersistentSessionManager(Injectable, StrReprMixin):
         self.current_session_pointer = ContextSessionPointer(RUNTIME_SESSION.sid, self.current_context_session.session_no)
         self.callbacks.before_context_session(self.current_session_pointer, self.current_context_session)
 
+#todo this is unused; probably leftover from previous repo that entangled database versioning with the executor; fix it and update the `clustering` example DB
     def mark_invoked_step(self, coordinates: TaskCoordinates):
         assert self.current_context_session is not None, "Cannot mark invoked steps outside of context session"
         self.current_context_session.invoked_steps.append(coordinates)
