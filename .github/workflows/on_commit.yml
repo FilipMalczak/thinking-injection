@@ -90,7 +90,7 @@ jobs:
           "3.12"
         ]
         project-name: [ "calculator", "clustering" ]
-    name: "Example project: ${{ matrix.project-name }} (${{ matrix.os }}, ${{ matrix.python-version }}"
+    name: "Example project: ${{ matrix.project-name }} (${{ matrix.os }}, ${{ matrix.python-version }})"
 
     steps:
       - uses: actions/checkout@v4
