@@ -9,22 +9,20 @@ set -e
 source ./venv/bin/activate >/dev/null 2>/dev/null
 
 export SMALL_DATASET=1
-export SHORT_RUN=1
 
 echo "First run - it should actually execute the experiment"
 BEFORE_FIRST=$(date +%s)
 python3 ./app.py
 AFTER_FIRST=$(date +%s)
 FIRST_DURATION=$(( AFTER_FIRST-BEFORE_FIRST ))
-FIRST_DURATION_MS=$(( FIRST_DURATION/1000000 ))
-echo "First run took ${FIRST_DURATION_MS}ms"
+echo "First run took ${FIRST_DURATION}ms"
 
 echo "Second run - shouldn't execute any steps, just confirm that stages structure hasn't changed"
 BEFORE_SECOND=$(date +%s)
 python3 ./app.py
 AFTER_SECOND=$(date +%s)
 SECOND_DURATION=$(( AFTER_SECOND-BEFORE_SECOND ))
-echo "Second run took ${SECOND_DURATION_MS}ms"
+echo "Second run took ${SECOND_DURATION}ms"
 
 if [[ $SECOND_DURATION -gt $FIRST_DURATION ]]; then
   echo "Second run was longer than the first!"
