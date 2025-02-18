@@ -15,14 +15,14 @@ BEFORE_FIRST=$(date +%s)
 python3 ./app.py
 AFTER_FIRST=$(date +%s)
 FIRST_DURATION=$(( AFTER_FIRST-BEFORE_FIRST ))
-echo "First run took ${FIRST_DURATION}ms"
+echo "First run took ${FIRST_DURATION}s"
 
 echo "Second run - shouldn't execute any steps, just confirm that stages structure hasn't changed"
 BEFORE_SECOND=$(date +%s)
 python3 ./app.py
 AFTER_SECOND=$(date +%s)
 SECOND_DURATION=$(( AFTER_SECOND-BEFORE_SECOND ))
-echo "Second run took ${SECOND_DURATION}ms"
+echo "Second run took ${SECOND_DURATION}s"
 
 if [[ $SECOND_DURATION -gt $FIRST_DURATION ]]; then
   echo "Second run was longer than the first!"
