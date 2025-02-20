@@ -24,7 +24,9 @@ dependencies = [
     "bidict>=0.23.1",
     "frozendict>=2.4.4",
     "type_intersections>=0.1.1",
-    "pydot>=3.0.2"
+    "pydot>=3.0.2",
+    "tinydb==4.8.2",
+    "networkx==3.4.2"
 ]
 requires-python = ">=3.12"
 
@@ -38,9 +40,13 @@ packages = [
     "thinking_injection.common",
     "thinking_injection.context",
     "thinking_injection.context.configurable",
+    "thinking_injection.invoker",
     "thinking_injection.registry",
     "thinking_injection.registry.customizable",
     "thinking_programming",
     "thinking_reflection",
-    "thinking_reflection.model"
+    "thinking_reflection.model",
+    "thinking_executor",
+    "thinking_executor.callbacks",
+    "thinking_executor.data"
 ]

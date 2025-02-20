@@ -101,3 +101,4 @@ if __name__ == "__main__":
     # test_optional_dependency_missing()
     # test_collective_of_interface_w_single_impl()
     # test_collective_of_interface_w_multiple_impls()
+    # test_optional_dependency_present()

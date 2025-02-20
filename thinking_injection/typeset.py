@@ -16,7 +16,7 @@ TypeAliasing = dict[type, type]
 
 
 def types(*t: type) -> TypeSet:
-    return set(*t)
+    return set(*t) if t else {}
 
 
 class InvalidModuleStyleException(Exception):

@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
 from functools import wraps
 from logging import getLogger
-from typing import Union, dataclass_transform
+from typing import Union, dataclass_transform, Callable
 
 from thinking_tests.fluent_decorator import fluent_decorator
+
+from thinking_reflection.interfaces import interface
 
 logger = getLogger(__name__)
 
@@ -18,6 +20,15 @@ def callback_method(reverse_order_of_composing=False):
         setattr(f, _IS_REVERSE_ORDER, reverse_order_of_composing)
         return f
     return decorator
+
+def conventional_callback[T](t: type[T]) -> type[T]:
+    for name in dir(t):
+        if name.startswith("on_") or name.startswith("before_") or name.startswith("after_"):
+            val = getattr(t, name)
+            is_reverse =  name.startswith("after_")
+            if isinstance(val, Callable):
+                setattr(t, name, callback_method(is_reverse)(val))
+    return interface(t)
 
 
 def _callback_methods(t: type):
@@ -39,6 +50,7 @@ _composite_types = {}
 class Composite[T]:
     delegates: list[T] = field(default_factory=list)
 
+    #todo use collectable
     def add_delegate(self, *delegates: T):
         self.delegates.extend(delegates)
 
@@ -52,8 +64,9 @@ class Composite[T]:
 
 
 #todo @cached
+#todo I need usable product types
 @dataclass_transform()
-def CompositeCallback[T](t: type[T]) -> type[T, Composite]: # noqa: N802
+def CompositeCallback[T](t: type[T]) -> type[T]: # noqa: N802
     if t.__name__ in _composite_types:
         return _composite_types[t.__name__]
     type_name = f"Composite{t.__name__}"

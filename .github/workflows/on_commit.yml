@@ -77,18 +77,20 @@ jobs:
   ##########################################
   # TESTING OF THE EXAMPLE PROJECTS
   ##########################################
-  calculator:
+  examples:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
-        working-directory: ./calculator
+        working-directory: ./${{matrix.project-name}}
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest]
         python-version: [
           "3.12"
         ]
+        project-name: [ "calculator", "clustering" ]
+    name: "Example project: ${{ matrix.project-name }} (${{ matrix.os }}, ${{ matrix.python-version }})"
 
     steps:
       - uses: actions/checkout@v4

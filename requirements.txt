@@ -4,3 +4,5 @@ bidict>=0.23.1
 frozendict>=2.4.4
 type_intersections>=0.1.1
 pydot>=3.0.2
+tinydb==4.8.2
+networkx==3.4.2

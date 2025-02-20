@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from enum import Enum
 from functools import cmp_to_key
+from logging import getLogger
 from typing import Protocol, runtime_checkable, Optional, Self, Iterable
 
 from pydot import Dot
@@ -14,38 +15,23 @@ from thinking_injection.typeset import ImmutableTypeSet
 from thinking_programming.collectable import Collectable
 from thinking_reflection.interfaces import ConcreteType, is_concrete
 
+
+log = getLogger(__name__)
+
+
 DiscoveredTypes = ImmutableTypeSet
 Implementations = frozenset[ConcreteType]
 Prerequisites = frozenset[ConcreteType]
 
-
+#fixme I think its unused
 def requires(idx: TypeIndex, depending: ConcreteType, dependency: ConcreteType) -> bool:
     return dependency in idx.prerequisites(depending)
 
 
+#fixme this mixin became aenemic
 class TypeIndexMixin:
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return frozenset(t for t in self.known_types() if is_concrete(t))
-
-    def least_requiring(self) -> frozenset[ConcreteType]:
-        counts = {
-            t: len(self.prerequisites(t))
-            for t in self.known_concrete_types()
-        }
-        min_count = min(counts.values())
-        return frozenset(k for k in counts.keys() if counts[k] == min_count)
-
-    def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
-        comparator = requirement_comparator(lambda x, y: requires(self, x, y), cyclic_resolver or CyclicResolver())
-        key_foo = cmp_to_key(comparator)
-        # if self.known_types(): #fixme or known_concrete_types?
-        if self.known_concrete_types():
-            least_dependent = self.least_requiring()
-            order = sorted(least_dependent, key=key_foo)
-            for x in order:
-                yield x
-            remainder = self.without(least_dependent)
-            yield from remainder.order(cyclic_resolver)
 
 
 #fixme not the best way, not the best placement
@@ -70,11 +56,13 @@ class TypeIndex(Protocol):
 
     def known_concrete_types(self) -> frozenset[ConcreteType]: pass
 
-    def least_requiring(self) -> frozenset[ConcreteType]: pass
+#todo cleanup
+    # def least_requiring(self) -> frozenset[ConcreteType]: pass
 
     def without(self, *t: Collectable[type]) -> Self: pass
 
-    def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]: pass
+    # def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]: pass
+    def order(self) -> Iterable[ConcreteType]: pass
 
     # todo untested
     def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot: pass
