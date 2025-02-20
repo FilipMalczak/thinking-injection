@@ -1,3 +1,4 @@
+import sys
 from logging import getLogger
 from pprint import pformat
 
@@ -9,13 +10,23 @@ from thinking_tests.simple import SimpleThinkingCase
 
 
 #todo move to thinking-tests
-def assert_fails(l):
+def assert_fails(l, exc_type=None):
+    exc = None
     try:
         l()
-        fail = False
-    except:
-        fail = True
-    assert fail
+    except BaseException as e:
+        exc = e
+    assert exc is not None
+    if exc_type is not None:
+        try:
+            assert isinstance(exc, exc_type)
+            return exc
+        except:
+            log = getLogger("test.assert_fails")
+            import traceback
+            log.error(f"Exception: {exc}")
+            log.error(f"Expected exception type: {exc_type}")
+            raise
 
 def assert_equal_dicts(expected, result):
     try:

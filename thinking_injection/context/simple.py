@@ -8,7 +8,7 @@ from frozendict import frozendict
 from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependency, DependencyKind, KindDefinition
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_injection.context.protocol import InstanceIndex, ApplicationContext
+from thinking_injection.context.protocol import InstanceIndex, ApplicationContext, DependencyValidationFailureException
 from thinking_injection.injectable import Injectable
 from thinking_injection.invoker.contextful import ContextfulInvoker
 from thinking_injection.invoker.protocol import Invoker
@@ -174,7 +174,10 @@ class SimpleInstanceIndex(InstanceIndex):
             kind = kind.value
         details = ImplementationDetails(self.index.implementations(t), self.index.primary_implementation(t))
         chosen = kind.choose_injected_types(details)
-        kind.validate_injected_types(chosen)
+        try:
+            kind.validate_injected_types(chosen)
+        except ExceptionGroup as g:
+            raise DependencyValidationFailureException({"self": g.exceptions})
         instances = [
                 self._lifecycles[i].target
                 for i in chosen
@@ -185,10 +188,15 @@ class SimpleInstanceIndex(InstanceIndex):
     def _inject_instance[T: type[Injectable]](self, t: T):
         instance: Injectable = self._lifecycles[t].target
         deps = self.index.dependencies(t)
-        kwargs = {
-            d.name: self.resolve_dependency(d)
-            for d in deps
-        }
+        kwargs = {}
+        issues = {}
+        for d in deps:
+            try:
+                kwargs[d.name] = self.resolve_dependency(d)
+            except DependencyValidationFailureException as e:
+                issues[d.name] = e.exceptions["self"]
+        if issues:
+            raise DependencyValidationFailureException(issues)
         instance.inject_requirements(**kwargs)
 
     def type_index(self) -> TypeIndex:

@@ -4,9 +4,10 @@ from types import GenericAlias
 from typing import NamedTuple, Iterable, Self, Callable, Union, Protocol, Any
 
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_injection.exceptions import InvalidInjectionPointException
+from thinking_injection.exceptions import InvalidInjectionPointException, InvalidThinkingStateException
 from thinking_injection.typeset import TypeSet
-from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, UnreachableInstructionException
+from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, \
+    UnreachableInstructionException, Group
 from thinking_programming.singleton import NastySingleton
 from thinking_reflection.interfaces import AnyType, ConcreteType
 
@@ -31,10 +32,10 @@ class ImplementationArity(Protocol):
         return Wrapper()
 
 
-EXACTLY_ONE = ImplementationArity.of(lambda x: x == 1)
-ZERO_OR_ONE = ImplementationArity.of(lambda x: x in [0, 1])
-ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
-
+class Arity(Enum):
+    EXACTLY_ONE = ImplementationArity.of(lambda x: x == 1)
+    ZERO_OR_ONE = ImplementationArity.of(lambda x: x in [0, 1])
+    ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
 
 
 class _Guard:
@@ -82,19 +83,47 @@ def flatten_types(*ts: type) -> list[type]:
         if x not in (type(None), _Guard)
     ]
 
+
+class DependencyValidationException(InvalidThinkingStateException): ...
+
+
+class DependencyArityMismatch(DependencyValidationException):
+    def __init__(self, to_inject: list, expected_arity: Arity):
+        self.to_inject = to_inject
+        self.expected_arity = expected_arity
+        DependencyValidationException.__init__(self, f"Expected arity of {expected_arity}, but dependency was resolved to {to_inject}")
+
+    @classmethod
+    def guard[T](cls, to_inject: list[T], expected_arity: Arity) -> list[T]:
+        if not expected_arity.value(len(to_inject)):
+            raise cls(to_inject, expected_arity)
+        return to_inject
+
+
+class NonePrimaryImplementationException(DependencyValidationException):
+    @classmethod
+    def guard[T](cls, to_inject: list[T]) -> list[T]:
+        if to_inject[0] is None:
+            raise cls()
+        return to_inject
+
+
+
 class KindDefinition(NastySingleton):# todo make it abc
     # arity: ImplementationArity #todo get rid of this
 
     def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
         """
         Used when figuring out the prerequisites as well as when performing injection. Chooses which implementation(s)
-        to use.
+        to use. May return invalid values - it will be validated by the next method.
         """
 
     def validate_injected_types(self, to_inject: list[ConcreteType]):
         """
         Called immediately after choose_injected_types; should raise some exception if there is an incorrect state (e.g.
         any implementation was expected, but none were found, in case of simple dependency).
+
+        :raises ExceptionGroup[DefinitionValidationException]:
         """
     #todo get_injected_types = choose then validate
 
@@ -122,14 +151,13 @@ class KindDefinition(NastySingleton):# todo make it abc
         """
 
 class SimpleDependency(KindDefinition):
-    # @property
-    # def arity(self) -> ImplementationArity: return EXACTLY_ONE
-
     def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
         return [ details.primary ]
 
     def validate_injected_types(self, to_inject: list[ConcreteType]):
-        assert len(to_inject) == 1 #todo better exception
+        with Group() as guard:
+            guard(DependencyArityMismatch, to_inject, Arity.EXACTLY_ONE)
+            guard(NonePrimaryImplementationException, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0]
@@ -140,18 +168,16 @@ class SimpleDependency(KindDefinition):
     def unpack_hint(self, t: type) -> type:
         return t
 
-class OptionalDependency(KindDefinition):
-    # @property
-    # def arity(self) -> ImplementationArity: return ZERO_OR_ONE
 
+class OptionalDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return [ details.primary ] if details.primary else []
 
     def validate_injected_types(self, to_inject: list[ConcreteType]):
-        try:
-            assert len(to_inject) < 2 #todo better exception
-        except:
-            raise
+        with Group() as guard:
+            guard(DependencyArityMismatch, to_inject, Arity.ZERO_OR_ONE)
+            if to_inject:
+                guard(NonePrimaryImplementationException, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0] if values_to_inject else None
@@ -162,15 +188,15 @@ class OptionalDependency(KindDefinition):
     def unpack_hint(self, t: type) -> type:
         return _guard_len_equals(flatten_types(t), 1)[0]
 
-class CollectiveDependency(KindDefinition):
-    # @property
-    # def arity(self) -> ImplementationArity: return ANY_NUMBER
 
+class CollectiveDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return list(details.implementations)
 
     def validate_injected_types(self, to_inject: list[ConcreteType]):
-        pass
+        with Group() as guard:
+            guard(DependencyArityMismatch, to_inject, Arity.ANY_NUMBER)
+        #todo check args not none
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject
@@ -187,6 +213,7 @@ class DependencyKind(Enum):
     SIMPLE = SimpleDependency()
     OPTIONAL = OptionalDependency()
     COLLECTIVE = CollectiveDependency()
+
 
 class Dependency(NamedTuple):
     name: str
@@ -207,13 +234,13 @@ def unpack_dependency(t: type) -> tuple[type, DependencyKind]:
 class NoDefaultForKwOnlyArgException(InvalidInjectionPointException):
     def __init__(self, issues: list[str]):
         self.issues: tuple[str, ...] = tuple(issues)
-        InvalidInjectionPointException.__init__(f"Some keyword-only arguments({issues}) have no default value")
+        InvalidInjectionPointException.__init__(f"Some keyword-only arguments ({issues}) have no default value")
 
 
 class UnannotatedNoDefaultPositionalArgException(InvalidInjectionPointException):
     def __init__(self, issues: list[str]):
         self.issues: tuple[str, ...] = tuple(issues)
-        InvalidInjectionPointException.__init__(f"Some arguments({issues}) have neither a default value nor an annotation")
+        InvalidInjectionPointException.__init__(f"Some arguments ({issues}) have neither a default value nor an annotation")
 
 
 def get_any_function_dependencies[**P, R](callable: Callable[P, R], *, skip_first_arg: bool) -> Dependencies:
