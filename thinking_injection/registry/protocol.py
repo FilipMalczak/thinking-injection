@@ -28,33 +28,10 @@ def requires(idx: TypeIndex, depending: ConcreteType, dependency: ConcreteType) 
     return dependency in idx.prerequisites(depending)
 
 
+#fixme this mixin became aenemic
 class TypeIndexMixin:
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return frozenset(t for t in self.known_types() if is_concrete(t))
-
-    # def least_requiring(self) -> frozenset[ConcreteType]:
-    #     counts = {
-    #         t: len(self.prerequisites(t))
-    #         for t in self.known_concrete_types()
-    #     }
-    #     min_count = min(counts.values())
-    #     return frozenset(k for k in counts.keys() if counts[k] == min_count)
-    #
-    # def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
-    #     comparator = requirement_comparator(lambda x, y: requires(self, x, y), cyclic_resolver or CyclicResolver())
-    #     key_foo = cmp_to_key(comparator)
-    #     # if self.known_types(): #fixme or known_concrete_types?
-    #     if self.known_concrete_types():
-    #         log.info(f"Ordering non-empty type index {self.data}")
-    #         least_dependent = list(self.least_requiring())
-    #         log.info(f"Least dependent types: {least_dependent}")
-    #         order = sorted(least_dependent, key=key_foo)
-    #         for x in order:
-    #             log.info(f"Yielding {x}")
-    #             yield x
-    #         remainder = self.without(least_dependent)
-    #         log.info(f"Remaining index {remainder.data}")
-    #         yield from remainder.order(cyclic_resolver)
 
 
 #fixme not the best way, not the best placement

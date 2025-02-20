@@ -54,6 +54,17 @@ class UnreachableInstructionException(InvalidStateException):
 class Group:
     """
     Fluent API over multiple Exc.guard(...) statements, brought as exception group.
+
+    Use it as:
+    try:
+        with Group("Message defaulting to None==''") as guard:
+            guard(SomeException, something, else)
+            guard(AnotherException, foo, bar, baz)
+    except ExceptionGroup as g:
+        ...
+
+    SomeException and AnotherException must have static/class method guard(...) that accepts (something, else) and
+    (foo, bar, baz), respectively.
     """
 
     #fixme maybe use BaseException(Group)?
@@ -77,5 +88,3 @@ class Group:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.exceptions:
             raise ExceptionGroup(self.msg or "", self.exceptions)
-
-

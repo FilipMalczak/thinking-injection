@@ -110,8 +110,6 @@ class NonePrimaryImplementationException(DependencyValidationException):
 
 
 class KindDefinition(NastySingleton):# todo make it abc
-    # arity: ImplementationArity #todo get rid of this
-
     def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
         """
         Used when figuring out the prerequisites as well as when performing injection. Chooses which implementation(s)

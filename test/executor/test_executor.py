@@ -16,7 +16,6 @@ log = getLogger(__name__)
 class Exc1(Exception): pass
 class Exc2(Exception): pass
 
-# todo test trackercallback #fixme a leftover from previous repo, I dont think it still makes sense
 
 def setup_context():
     ctx = ConfigurableContext([TinyDBTestConfiguration])
@@ -30,6 +29,7 @@ def setup_context():
     }
 
 #fixme this approach to setup/teardown is irritating when it comes to passing params to cases
+# https://github.com/FilipMalczak/thinking-tests/issues/1
 with setup(setup_context):
     @case
     def running_twice_in_the_same_session_doesnt_skip(setup):

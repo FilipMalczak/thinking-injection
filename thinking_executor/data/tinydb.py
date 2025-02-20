@@ -2,6 +2,7 @@ from logging import getLogger
 from os import makedirs
 from os.path import exists, dirname, abspath
 
+from thinking_runtime.defaults.recognise_runtime import current_runtime, RuntimeMode
 from tinydb import TinyDB
 
 from thinking_executor.data.tiny_model import TinyConfiguration, TinyDBTable, TinyDBParameters
@@ -44,12 +45,10 @@ class TinyDBLifecycle(Injectable):
     def get_table_of(self, t: type) -> TinyDBTableWithSchema:
         return self.db_with_schema.table_of(t)
 
-try:
-    from thinking_tests.current import current_case, current_case_id
+if current_runtime().mode == RuntimeMode.TEST:
+    from thinking_tests.current import current_case_id
 
     @discover
     class TinyDBTestConfiguration(TinyConfiguration):
         def get_tinydb_parameters(self) -> TinyDBParameters:
             return TinyDBParameters(f"./test-data/{current_case_id()}.json")
-except ModuleNotFoundError:
-    pass # declare this class only if in testing environment

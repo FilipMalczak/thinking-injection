@@ -56,12 +56,7 @@ class ReflectiveMock:
             if UNSUPPORTED in x:
                 x.remove(UNSUPPORTED)
 
-        # raw__init__ = cls.__init__
-
-        # @wraps(raw__init__)
-        # def __init__(self, *args, **kwargs): #todo ignore linter
         def __new__(cls, *args, **kwargs): #todo ignore linter
-            # raw__init__(self, *args, **kwargs)
             try:
                 self = object.__new__(cls, *args, **kwargs)
             except TypeError:
@@ -119,12 +114,9 @@ class ReflectiveMock:
                 setattr(self, mn, Mock())
 
             return self
-        # cls.__init__ = __init__
         cls.__new__ = __new__
         for pn, pts in props.items():
             setattr(cls, pn, InstanceAwarePropertyMock(pn))
-        # for mn in methods:
-        #     setattr(cls, mn, Mock())
 
 
 def reflective_mock(*t: type, name=None) -> type[ReflectiveMock]:
@@ -132,8 +124,6 @@ def reflective_mock(*t: type, name=None) -> type[ReflectiveMock]:
     bases = (ReflectiveMock, ) + t
     out = type(name, bases, {}, mocked_types=set(t))
     return out
-    # class SpecializedReflectiveMock(ReflectiveMock, *t, mocked_types=set(t)): pass
-    # return SpecializedReflectiveMock
 
 
 class Mocking(ConfigurationPhase):

@@ -98,9 +98,6 @@ class SimpleTypeIndex(NamedTuple):
                     log.debug(f"Primary: {primary}")
                     details = ImplementationDetails(implementations, primary)
                     dep_kind = d.kind.value
-                    #todo cleanup
-                    # assert dep_kind.arity.matches(len(implementations))  # todo msg; fixme should actually check if primary is set or not too
-                    # impl = dep_kind.choose_implementations(details)
                     prereqs = dep_kind.choose_injected_types(details)
                     dep_kind.validate_injected_types(prereqs)
                     requirements.update(prereqs)
@@ -124,9 +121,6 @@ class SimpleTypeIndex(NamedTuple):
 
     def known_concrete_types(self) -> frozenset[ConcreteType]:
         return TypeIndexMixin.known_concrete_types(self)
-
-    # def least_requiring(self) -> frozenset[ConcreteType]:
-    #     return TypeIndexMixin.least_requiring(self)
 
     def order(self) -> Iterable[ConcreteType]:
         # edge X -> Y means "Y requires X" - the direction is reversed, because we want topological sort result to start with no-dependency types
@@ -155,9 +149,6 @@ class SimpleTypeIndex(NamedTuple):
                     yield t
         except NetworkXUnfeasible:
             raise # fixme specialize exception; this is thrown when there are cycles
-
-    # def order(self, cyclic_resolver: TypeComparator = None) -> Iterable[ConcreteType]:
-    #     return TypeIndexMixin.order(self, cyclic_resolver)
 
     @classmethod
     def build(cls, d: dict[type, TypeDescriptor] = None) -> Self:
@@ -260,7 +251,6 @@ class SimpleTypeRegistryCustomizer(TypeRegistryCustomizer):
         return SimpleImplementationsCustomizer(self._registry)
 
 
-# @snapshot_as_lifecycle #todo
 class SimpleRegistry(CustomizableTypeRegistry):
     def __init__(self, *t: Collectable[type]):
         self.data = defaultdict(MutableTypeDescriptor)
