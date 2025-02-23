@@ -26,7 +26,9 @@ dependencies = [
     "type_intersections>=0.1.1",
     "pydot>=3.0.2",
     "tinydb==4.8.2",
-    "networkx==3.4.2"
+    "networkx==3.4.2",
+    "docker==7.1.0",
+    "setuptools==75.8.0" # needed by docker-py on p3.12+
 ]
 requires-python = ">=3.12"
 
