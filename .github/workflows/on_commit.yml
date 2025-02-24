@@ -38,6 +38,7 @@ jobs:
           [ -f ./test-requirements.txt ] && pip install -r ./test-requirements.txt || echo "No test-requirements.txt found"
       - name: Run tests
         run: |
+          [[ "${{ matrix.os }}" == "macos-latest" ]] && export DOCKER_DISABLED=1 || echo "Docker should be enabled"
           python -m test.run_all
       - name: Publish test report
         uses: dorny/test-reporter@v1
