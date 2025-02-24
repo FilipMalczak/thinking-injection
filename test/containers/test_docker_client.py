@@ -16,6 +16,7 @@ from thinking_injection.typeset import from_package
 log = getLogger(__name__)
 
 if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
+    #fixme this is a good candidate for parametrized case
 
     @case
     def test_running_echo_server_with_from_env():
