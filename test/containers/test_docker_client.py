@@ -1,18 +1,16 @@
 import urllib
 from http.client import HTTPException
 from logging import getLogger
-from time import sleep
 from urllib.error import URLError
 
-from thinking_tests.current import current_case, current_case_name
+from thinking_tests.current import current_case_name
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_containers.docker import DockerFromEnvClientFactory, UnixSocketDockerClientFactory
-from thinking_containers.protocol import ContainerClient, ContainerClientFactory
+from thinking_containers.docker_client import DockerFromEnvClientFactory, UnixSocketDockerClientFactory
+from thinking_containers.protocol import ContainerClient
 from thinking_injection.context.simple import SimpleContext
 from thinking_injection.typeset import from_package
-from thinking_programming.exceptions import UnreachableInstructionException
 
 log = getLogger(__name__)
 

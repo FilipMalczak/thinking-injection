@@ -181,7 +181,7 @@ class BaseTypeAnalyser(TypeAnalyser):
                         methods[name] = MethodDescriptor(sig, val_scope)
                         log.debug(f"Method: {methods[name]}")
                     else:
-                        log.debug(f"Ignoring ({val_scope in type_scope}, {self._method_filter(name, val)})")
+                        log.debug(f"Ignoring (in scope: {val_scope in type_scope}, filter: {self._method_filter(name, val)})")
                 # descriptors override the annotation
                 elif isinstance(val, AnyDescriptor):
                     log.debug(f"{name} is a descriptor")
@@ -195,11 +195,11 @@ class BaseTypeAnalyser(TypeAnalyser):
                                     log.debug(f"Field: {fields[name]}")
                                     break
                                 else:
-                                    log.debug(f"Ignoring ({desc_scope in type_scope}, {self._descriptor_filter(name, val)})")
+                                    log.debug(f"Ignoring (in scope: ({desc_scope in type_scope}, filter: {self._descriptor_filter(name, val)})")
                             else:
                                 log.debug(f"No-source element {val}, ignoring")
                 else:
-                    log.debug(f"Ignoring {name}")
+                    log.debug(f"Ignoring class-level {name}")
                     pass #this explicitly ignores class-level fields
         else:
             log.debug(f"No-source subject {subject}, ignoring")

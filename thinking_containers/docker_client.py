@@ -1,20 +1,26 @@
 from dataclasses import dataclass
 
-import docker
-
 from thinking_containers.protocol import Container, ContainerClient, ContainerClientFactory, Volumes, Ports, \
     ContainerStatus
 from thinking_programming.exceptions import UnreachableInstructionException
 
-# import docker
-# BackendContainer = docker.models.containers.Container
-# BackendClient = docker.client.DockerClient
-# from docker.models.containers import Container as BackendContainer
-# from docker.client import DockerClient as BackendClient
+##############################################################################################
+#                                                                                            #
+#      IMPORTANT!!!                                                                          #
+#                                                                                            #
+##############################################################################################
+#
+# this file cannot be named docker.py or there will be weird import conflicts; hence the _client suffix
+#
+# for the same reason we have test.containers.test_docker_client and not test.docker.<whatwever>
+
+import docker
+BackendContainer = docker.models.containers.Container
+BackendClient = docker.client.DockerClient
 
 @dataclass
 class DockerContainer(Container):
-    backend: object#: BackendContainer
+    backend: BackendContainer
     volumes: Volumes
     ports: Ports
 
@@ -43,9 +49,9 @@ class DockerContainer(Container):
 
 
 class DockerClient(ContainerClient[DockerContainer]):
-    def __init__(self, backend: object):
-    # def __init__(self, backend: BackendClient):
-        self.backend: object = backend
+    def __init__(self, backend: BackendClient):
+        self.backend: BackendClient = backend
+        self.backend.ping()
 
     def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None) -> DockerContainer:
         v = {
@@ -55,7 +61,6 @@ class DockerClient(ContainerClient[DockerContainer]):
         p = ports or dict()
         backend = self.backend.containers.run(img, cmd, name=name, ports=p, volumes=v, detach=True)
         return DockerContainer(backend, v, p)
-
 
 class DockerFromEnvClientFactory(ContainerClientFactory[DockerClient]):
     def client(self) -> DockerClient:

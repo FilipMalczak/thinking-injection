@@ -25,8 +25,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
+#      - name: Set up Docker
+#        uses: docker/setup-docker-action@v4
       - name: Install develop versions of thinking requirements
         if: ${{ github.ref != 'refs/heads/master' }}
         run: |
