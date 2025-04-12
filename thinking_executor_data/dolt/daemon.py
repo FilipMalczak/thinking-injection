@@ -35,9 +35,9 @@ class DoltDaemonConfig(NamedTuple):
     # host: str = "localhost"
     user_config: DoltUserConfig = DoltUserConfig()
     db_name: str = "thinking"
-    command: str = "/usr/local/bin/dolt"
+    command: str = "dolt"
     installed_check: list[str] = ["version"]
-    repo_check: list[str] = ["status"]
+    repo_check: list[str] = ["status"] #fixme not used anymore
     healthcheck_sql: str = "select current_timestamp();"
 
 @interface
