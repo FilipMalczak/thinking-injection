@@ -36,6 +36,8 @@ jobs:
           [ -f ./build-requirements.txt ] && pip install -r ./build-requirements.txt || echo "No build-requirements.txt found"
           [ -f ./requirements.txt ] && pip install -r ./requirements.txt || echo "No requirements.txt found"
           [ -f ./test-requirements.txt ] && pip install -r ./test-requirements.txt || echo "No test-requirements.txt found"
+      - name: Install Dolt
+        uses: sebhoss/dolt-installer@v1
       - name: Run tests
         run: | #macos runner doesn't seem to support Docker; disable tests that require docker on that runner 
           [[ "${{ matrix.os }}" == "macos-latest" ]] && export DOCKER_DISABLED=1 || echo "Docker should be enabled"

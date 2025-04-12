@@ -43,6 +43,14 @@ def from_package(pkg: ModuleNamePointer) -> TypeSet:
         if type_(t).defined_in_package(pkg_name)
     )
 
+def from_packages(*pkgs: ModuleNamePointer) -> TypeSet:
+    """
+    :raise InvalidModuleStyleException:
+    """
+    def yielding():
+        for p in pkgs:
+            yield from from_package(p)
+    return set(yielding())
 
 def from_module(mod: ModuleNamePointer) -> TypeSet:
     """

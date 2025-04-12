@@ -1,25 +1,38 @@
 from enum import Enum, auto
+from logging import getLogger
 from typing import Protocol, NamedTuple
 
 from thinking_injection.injectable import Injectable
+from thinking_programming.readwrite import ReadWrite
 from thinking_reflection.discovery import discover
 from thinking_reflection.interfaces import interface
 
-class MountMode(Enum):
-    RO = auto()
-    RW = auto()
+log = getLogger(__name__)
+
 
 Path = str
 
-class Mount(NamedTuple):
-    path: Path
-    mode: MountMode
+class LocalVolume(NamedTuple):
+    host_path: str
 
-Volumes = dict[Path, Mount]
+class NamedVolume(NamedTuple):
+    volume_name: str
+
+VolumeDefinition = LocalVolume | NamedVolume
+
+ContainerPath = Path
+
+class HostMount(NamedTuple):
+    definition: VolumeDefinition
+    mode: ReadWrite = ReadWrite.RW
+
+Volumes = dict[ContainerPath, HostMount]
 
 Port = int #todo some constraints maybe?
+ContainerPort = Port
+HostPort = Port
 
-Ports = dict[Port, Port]
+Ports = dict[ContainerPort, HostPort]
 
 class ContainerStatus(Enum):
     #todo STARTING?
@@ -34,15 +47,46 @@ class Container(Protocol):
 
     status: ContainerStatus
 
-    def stop(self):
+    def stop(self): #todo return ContainerExit which should be a daemon thread (so, it can be joined) and have exit_code property
         """
         Should be blocking and idempotent. TBD about exit codes and whatnot.
         """
 
+class VolumesClient(Protocol):
+    def create(self, name: str) -> NamedVolume: ... #todo what should happen if already exists?
 
+    def exists(self, name: str) -> bool: ...
+
+    def delete(self, name: str): ... #todo what should happen if doesnt exist? define a specialized exception
+
+    def __getitem__(self, item: str) -> NamedVolume:
+        if not self.exists(item):
+            log.debug(f"Volume {item} doesn't exist, creating it")
+            return self.create(item)
+        else:
+            log.debug(f"Volume {item} already exists")
+        return NamedVolume(item)
+
+    def __contains__(self, item: str | NamedVolume) -> bool:
+        if isinstance(item, NamedVolume):
+            item = item.volume_name
+        result = self.exists(item)
+        return result
+
+    def __delitem__(self, key: str):
+        self.delete(key)
+
+#todo only run is tested
 @interface
 class ContainerClient[C: Container](Protocol):
-    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None) -> C: ...
+    def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False): ...
+
+    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None, envvars: dict[str, str | int] = None) -> C:
+        """
+        Ports and volumes have keys inside the container and value referring to the host.
+        """
+
+    def volumes(self) -> VolumesClient: ...
 
 @interface
 class ContainerClientFactory[Client: ContainerClient](Protocol):
@@ -50,12 +94,18 @@ class ContainerClientFactory[Client: ContainerClient](Protocol):
 
 
 @discover
-class DockerClientProxy(ContainerClient, Injectable):
+class ContainerClientProxy(ContainerClient, Injectable):
     def __init__(self):
         self.delegate: ContainerClient = None
 
     def inject_requirements(self, factory: ContainerClientFactory):
         self.delegate = factory.client()
 
-    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None) -> Container:
+    def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False):
+        return self.delegate.build(dir, filename, name, tag, overwrite)
+
+    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None, envvars: dict[str, str] = None) -> Container:
         return self.delegate.run(img, name=name, cmd=cmd, volumes=volumes, ports=ports)
+
+    def volumes(self) -> VolumesClient:
+        return self.delegate.volumes()

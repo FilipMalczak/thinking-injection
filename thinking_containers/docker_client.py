@@ -1,7 +1,12 @@
 from dataclasses import dataclass
+from logging import getLogger
+from threading import Thread
+from time import sleep
+
+from docker.errors import ImageNotFound, NotFound
 
 from thinking_containers.protocol import Container, ContainerClient, ContainerClientFactory, Volumes, Ports, \
-    ContainerStatus
+    ContainerStatus, VolumesClient, NamedVolume, VolumeDefinition, LocalVolume
 from thinking_programming.exceptions import UnreachableInstructionException
 
 ##############################################################################################
@@ -17,6 +22,10 @@ from thinking_programming.exceptions import UnreachableInstructionException
 import docker
 BackendContainer = docker.models.containers.Container
 BackendClient = docker.client.DockerClient
+
+
+log = getLogger(__name__)
+
 
 @dataclass
 class DockerContainer(Container):
@@ -37,7 +46,7 @@ class DockerContainer(Container):
         raw_status = self.backend.status
         if raw_status == "running":
             return ContainerStatus.RUNNING
-        elif raw_status == "exited":
+        elif raw_status == "exited": #todo this may be an issue; sometimes its 'created' even after exit
             return ContainerStatus.FINISHED
         UnreachableInstructionException.guard(f"Unrecognized status response {raw_status}")
 
@@ -46,21 +55,121 @@ class DockerContainer(Container):
         Should be blocking and idempotent. TBD about exit codes and whatnot.
         """
         self.backend.stop()
+        self.backend.wait()
+        self.backend.remove()
 
+def stream_logs(container, logger):
+    for log in container.logs(stream=True):
+        logger.info(log.decode('utf-8').strip())
+
+class DockerVolumesClient(VolumesClient):
+    def __init__(self, backend: BackendClient):
+        self.backend: BackendClient = backend
+
+    def create(self, name: str) -> NamedVolume:
+        log.debug(f"Creating volume {name}")
+        self.backend.volumes.create(name)
+        return NamedVolume(name)
+
+    def exists(self, name: str) -> bool:
+        try:
+            self.backend.volumes.get(name)
+            return True
+        except NotFound:
+            return False
+
+    def delete(self, name: str):
+        #fixme try NotFound may bubble up
+        log.debug(f"Deleting volume {name}")
+        self.backend.volumes.get(name).remove()
 
 class DockerClient(ContainerClient[DockerContainer]):
     def __init__(self, backend: BackendClient):
         self.backend: BackendClient = backend
         self.backend.ping()
 
-    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None) -> DockerContainer:
-        v = {
-            k: { "bind": v.path, "mode": v.mode.name.lower() }
-            for k, v in (volumes or dict()).items()
-        }
+    def volumes(self) -> VolumesClient:
+        return DockerVolumesClient(self.backend)
+
+    def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False):
+        fullname = f"{name}:{tag}"
+        exists = False
+        try:
+            self.backend.images.get(fullname)
+            exists = True
+        except ImageNotFound:
+            pass
+        should_build = True
+        if exists:
+            if overwrite:
+                self.backend.images.remove(fullname)
+            else:
+                should_build = False
+        if should_build:
+            _, logs = self.backend.images.build(
+                path=dir,
+                dockerfile=filename,
+                tag=fullname
+            )
+            l = getLogger("docker-build/"+fullname)
+            for line in logs:
+                x = line["stream"].strip()
+                l.info(x)
+
+    def _prepare_volume(self, definition: VolumeDefinition) -> str:
+        if isinstance(definition, LocalVolume):
+            return definition.host_path
+        elif isinstance(definition, NamedVolume):
+            return definition.volume_name
+        else:
+            UnreachableInstructionException.guard(f"Unknown volume definition type: {type(definition)} ({definition})")
+
+    def _prepare_volumes(self, volumes: Volumes) -> dict:
+        out = {}
+        for container_path, details in volumes.items():
+            out[self._prepare_volume(details.definition)] = {
+                "bind": container_path,
+                "mode": details.mode.name.lower()
+            }
+        return out
+
+    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None, envvars: dict[str, str | int] = None) -> DockerContainer:
+        volumes = volumes or dict()
+        v = self._prepare_volumes(volumes)
         p = ports or dict()
-        backend = self.backend.containers.run(img, cmd, name=name, ports=p, volumes=v, detach=True)
-        return DockerContainer(backend, v, p)
+        try:
+            self.backend.images.get(img)
+        except ImageNotFound:
+            l = getLogger("docker-pull/"+img)
+            l.debug("Image not found, pulling")
+            repo, colon, tag = img.rpartition(":")
+            #todo customize exception that may be raised here (or dont?)
+            self.backend.images.pull(repo, tag)
+            l.debug("Image pulled")
+
+        envvars = envvars or dict()
+        envvars = {
+            k: str(v)
+            for k, v in envvars.items()
+        }
+        #todo should we expose envvars too?
+        backend = self.backend.containers.run(
+            img,
+            cmd,
+            name=name,
+            ports=p,
+            volumes=v,
+            detach=True,
+            environment=envvars or dict(),
+            extra_hosts={"host.docker.internal": "host-gateway"}
+        )
+        #fixme not necessarily the best idea, but its useful when developing; add some control over that
+
+        # log_thread = Thread(target=stream_logs, args=(backend, getLogger("docker-run/"+backend.name)))
+        # log_thread.daemon = True
+        # log_thread.start()
+        sleep(4) #fixme there should be a better way to do this
+        return DockerContainer(backend, volumes, p)
 
 class DockerFromEnvClientFactory(ContainerClientFactory[DockerClient]):
     def client(self) -> DockerClient:

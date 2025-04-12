@@ -75,7 +75,7 @@ class _InstanceIndexLoopback(InstanceIndex):
         NoneValueException.guard(result, "instance index loopback delegate")
         return result
 
-    def instance[T](self, t: type[T]) -> Optional[T]:
+    def instance[T](self, t: type[T], *, required: bool = True) -> Optional[T]:
         return self.__delegate__.instance(t)
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
@@ -148,10 +148,11 @@ class SimpleInstanceIndex(InstanceIndex):
         finally:
             self._lifecycles.clear()
 
-    def instance[T](self, t: type[T]) -> Optional[T]:
+    def instance[T](self, t: type[T], *, required: bool = True) -> Optional[T]:
         #todo test "no instance for the type" cases
         primary_type = self.index.primary_implementation(t)
         if primary_type is None:
+            assert not required #todo msg
             return None
         return self._lifecycles[primary_type].target
 
@@ -175,7 +176,7 @@ class SimpleInstanceIndex(InstanceIndex):
         details = ImplementationDetails(self.index.implementations(t), self.index.primary_implementation(t))
         chosen = kind.choose_injected_types(details)
         try:
-            kind.validate_injected_types(chosen)
+            kind.validate_injected_types(t, chosen)
         except ExceptionGroup as g:
             raise DependencyValidationFailureException({"self": g.exceptions})
         instances = [

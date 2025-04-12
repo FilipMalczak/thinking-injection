@@ -1,12 +1,16 @@
 import sys
 from logging import getLogger
 from pprint import pformat
+from typing import Callable, Iterable
 
 from thinking_modules.model import ModuleName
 from thinking_tests import decorators
 from thinking_tests.fluent_decorator import fluent_decorator
-from thinking_tests.protocol import CaseCoordinates
+from thinking_tests.protocol import CaseCoordinates, ThinkingCase
+from thinking_tests.runner.protocol import BackendResultType
+from thinking_tests.running.start import default_sorter, run_all
 from thinking_tests.simple import SimpleThinkingCase
+from thinking_tests.utils import caller_module_name, main_module_real_name
 
 
 #todo move to thinking-tests
@@ -54,11 +58,26 @@ def assert_equal_dicts(expected, result):
                     log.error(f"\tResult value:   {pformat(result_val)}")
         raise
 
+class NamedLambda[C: Callable]:
+    def __init__(self, name: str, foo: C):
+        self.name = name
+        self.foo = foo
+
+    def __call__(self, *args, **kwargs):
+        return self.foo(*args, **kwargs)
+
+    def __str__(self):
+        return type(self).__name__+"(name: "+self.name+")"
+
 @fluent_decorator
 def parametrized_case(name=None, *, params=None, setup=None, teardown=None):
     def decorator(f):
         nonlocal name, params, setup, teardown
         params = params or tuple()
+        if not isinstance(params, Iterable):
+            params = (params, )
+        else:
+            params = tuple(params)
         name = (name or f.__name__)+" // parameters: ("+(", ".join(str(x) for x in params))+")"
         setup = setup or decorators.CURRENT_SETUP
         teardown = teardown or decorators.CURRENT_TEARDOWN
@@ -71,3 +90,20 @@ def parametrized_case(name=None, *, params=None, setup=None, teardown=None):
         decorators.KNOWN_CASES.append(case)
         return case
     return decorator
+
+#fixme bundled variant is broken
+def run_current_package(predicate: Callable[[ThinkingCase], bool] = None,
+                        *,
+                        sorter: Callable[[list[ThinkingCase]], list[ThinkingCase]] = None) -> BackendResultType:
+    """
+    Scan the package in which calling module lies, as well as its subpackages. If called from pkg.__main__ or pkg.__init__,
+    takes pkg as that package. Run all tests found within
+    """
+    predicate = predicate or (lambda x: True)
+    sorter = sorter or default_sorter
+    name = caller_module_name(2) # 1 is this module, we're looking for caller of this method
+    caller_module = main_module_real_name() if name == "__main__" else ModuleName.resolve(name)
+    pkg_name = caller_module.parent
+    def final_predicate(x: ThinkingCase) -> bool:
+        return pkg_name.is_ancestor(ModuleName.resolve(x.coordinates.module_name)) and predicate(x)
+    return run_all(final_predicate, root_package=pkg_name.qualified, sorter=sorter)

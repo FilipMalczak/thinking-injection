@@ -5,7 +5,8 @@ from os.path import exists
 from thinking_tests.decorators import case, setup
 from thinking_tests.running.start import run_current_module
 
-from thinking_executor.data.tinydb import TinyDBTestConfiguration
+from thinking_executor.data.persistence import TestDataConfiguration
+from thinking_executor.data.tinydb import CommonTinyDBConfiguration
 from thinking_executor.executor import TaskExecutor
 from thinking_executor.executor_model import Args
 from thinking_injection.context.configurable.impl import ConfigurableContext
@@ -18,9 +19,9 @@ class Exc2(Exception): pass
 
 
 def setup_context():
-    ctx = ConfigurableContext([TinyDBTestConfiguration])
+    ctx = ConfigurableContext([TestDataConfiguration, CommonTinyDBConfiguration])
     with ctx.lifecycle() as index:
-        config = index.instance(TinyDBTestConfiguration)
+        config = index.instance(CommonTinyDBConfiguration)
         path = config.get_tinydb_parameters().path
         if exists(path):
             remove(path)
@@ -54,7 +55,7 @@ with setup(setup_context):
 
             executor.execute_stage("top", top_level)
 
-            assert trace == [ ["top"], 1, "INITIAL_END" ]
+            assert trace == [ ["top"], 1, "INITIAL_END" ], f"Actual trace: {trace}"
 
     @case
     def test_continuing_after_error(setup):
@@ -100,7 +101,7 @@ with setup(setup_context):
                 trace.append("secondary end")
 
             executor.execute_stage("top", top_level_again)
-        assert trace == [ ["top"], 1, "INITIAL_END", "arg1", "secondary end" ]
+        assert trace == [ ["top"], 1, "INITIAL_END", "arg1", "secondary end" ], f"Actual trace: {trace}"
 
     @case
     def test_skipping_steps_between_sessions(setup):
@@ -127,8 +128,7 @@ with setup(setup_context):
         with ctx.lifecycle() as index:
             executor = index.instance(TaskExecutor)
             executor.execute_stage("top", top_level)
-
-        assert trace == []
+        assert trace == [['top'], 'INITIAL_END'], f"Actual trace: {trace}"
 
     @case
     def running_twice_with_decorators_in_the_same_session_doesnt_skip(setup):
@@ -158,7 +158,7 @@ with setup(setup_context):
                     trace.append(executor.current_key)
 
                 trace.append("INITIAL_END")
-            assert trace == [["top_level"], 1, "INITIAL_END"]
+            assert trace == [["top_level"], 1, "INITIAL_END"], f"Actual trace: {trace}"
 
 
     @case
@@ -175,7 +175,7 @@ with setup(setup_context):
                     trace.append(executor.current_key)
                 trace.append("INITIAL_END")
 
-        assert trace == [["top_level"], 1, "INITIAL_END"]
+        assert trace == [["top_level"], 1, "INITIAL_END"], f"Actual trace: {trace}"
         log.info("Rerun")
         trace = []
 
@@ -191,7 +191,9 @@ with setup(setup_context):
 
                 trace.append("INITIAL_END")
 
-        assert trace == []
+        assert trace == [['top_level'], 'INITIAL_END'], f"Actual trace: {trace}"
+
+#FIXME you didnt test that stages are never skipped!
 
 if __name__=="__main__":
     run_current_module()

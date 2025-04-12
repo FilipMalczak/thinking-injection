@@ -30,7 +30,7 @@ def test_empty_context():
         pass
 
 def assert_context(idx: InstanceIndex, proto: type, primary_type: type | None, impl_types: set[type]):
-    primary = idx.instance(proto)
+    primary = idx.instance(proto, required=False)
     impls = idx.instances(proto)
     if primary_type is None:
         assert primary is None

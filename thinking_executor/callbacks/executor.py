@@ -6,7 +6,6 @@ from thinking_executor.session_model import ContextSessionPointer
 from thinking_programming.callbacks import callback_method, CompositeCallback, conventional_callback
 from thinking_programming.exceptions import UnreachableInstructionException
 from thinking_programming.outcome import Outcome
-from thinking_reflection.interfaces import interface
 
 logger = getLogger(__name__)
 
@@ -29,6 +28,7 @@ class StepExecutorCallback:
     def on_task_skipped(self, exec_log: TaskExecutionRecord):
         if exec_log.coordinates.task_type == TaskType.STEP:
             self.on_step_skipped(exec_log)
+        #fixme stages should never be skippable
         elif exec_log.coordinates.task_type == TaskType.STAGE:
             self.on_stage_skipped(exec_log)
         else:

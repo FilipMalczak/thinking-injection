@@ -5,6 +5,7 @@ from logging import getLogger
 from typing import NamedTuple, Optional, Self, Callable, Iterable, Any
 
 from frozendict import frozendict
+from networkx.algorithms.cycles import simple_cycles
 from networkx.algorithms.dag import topological_sort, lexicographical_topological_sort
 from networkx.classes import DiGraph
 from networkx.exception import NetworkXUnfeasible
@@ -14,7 +15,8 @@ from thinking_injection.cloneable import Cloneable
 from thinking_injection.common.dependencies import Dependencies, DependencyKind, get_type_dependencies, Dependency
 from thinking_injection.common.exceptions import UnknownTypesException, UnknownTypeException
 from thinking_injection.common.implementations import ImplementationDetails
-from thinking_injection.exceptions import ConcreteTypeExpectedException, InvalidInternalTypeException
+from thinking_injection.exceptions import ConcreteTypeExpectedException, InvalidInternalTypeException, \
+    InvalidThinkingStateException
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.customizable.customizer import TypeRegistryCustomizer, ImplementationsCustomizer, \
     TypeImplementationsCustomizer
@@ -60,6 +62,19 @@ class MutableTypeDescriptor(Cloneable):
     def clone(self) -> Self:
         return MutableTypeDescriptor(set(self.dependencies), set(self.implementations), self.forced_primary)
 
+class CyclicDependencyGraphException(InvalidThinkingStateException):
+    def __init__(self, cycles: list[list[type]], dot: str):
+        self.cycles = cycles
+        self.dot = dot
+        msg = [ "Dependency graph contains following cycles:" ]
+        for c in cycles:
+            msg.append(
+                f"\t{', '.join(map(str, c))}"
+            )
+        msg.append("")
+        msg.append("DOT for current index:")
+        msg.append(dot)
+        InvalidThinkingStateException.__init__(self, "\n".join(msg))
 
 class SimpleTypeIndex(NamedTuple):
     data: frozendict[type, TypeDescriptor]
@@ -99,7 +114,7 @@ class SimpleTypeIndex(NamedTuple):
                     details = ImplementationDetails(implementations, primary)
                     dep_kind = d.kind.value
                     prereqs = dep_kind.choose_injected_types(details)
-                    dep_kind.validate_injected_types(prereqs)
+                    dep_kind.validate_injected_types(dep_type, prereqs)
                     requirements.update(prereqs)
         for r in requirements:
             ConcreteTypeExpectedException.guard(r)
@@ -148,7 +163,14 @@ class SimpleTypeIndex(NamedTuple):
                 if is_concrete(t):
                     yield t
         except NetworkXUnfeasible:
-            raise # fixme specialize exception; this is thrown when there are cycles
+            cycles = simple_cycles(graph)
+            cycle_strs = [ [idx_to_type[n] for n in c] for c in cycles]
+            colored = set()
+            colored.update(*cycle_strs)
+            raise CyclicDependencyGraphException(
+                cycle_strs,
+                self.graph(edges={GraphEdge.REQUIRES}, colors={k: "red" for k in colored}).to_string()
+            )
 
     @classmethod
     def build(cls, d: dict[type, TypeDescriptor] = None) -> Self:
@@ -156,12 +178,21 @@ class SimpleTypeIndex(NamedTuple):
         log.info(f"Building TypeIndex {d}")
         return SimpleTypeIndex(frozendict(d))
 
-    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot:
-        if edges is None:
-            edges = set(GraphEdge)
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None, colors: dict[str, str]=None) -> Dot:
+        edges = edges or set(GraphEdge)
+        colors = colors or dict()
         result = Dot(graph_name=name, graph_type="digraph", suppress_disconnected=True)
         for k in self.data.keys():
-            result.add_node(Node(k.__name__, shape="box" if is_concrete(k) else "diamond"))
+            kwargs = {
+                "shape": "box" if is_concrete(k) else "diamond"
+            }
+            if k in colors:
+                kwargs["color"] = colors[k]
+            result.add_node(Node(k.__name__, **kwargs))
+        def _coloring(x, y):
+            if x in colors and y in colors:
+                return {"color": f"{colors[x]}:{colors[y]}"}
+            return {}
         for k in self.data.keys():
             if GraphEdge.IMPLEMENTS in edges:
                 primary = self.primary_implementation(k)
@@ -171,7 +202,8 @@ class SimpleTypeIndex(NamedTuple):
                             i.__name__, k.__name__,
                             style="bold" if i == primary else "solid",
                             label=GraphEdge.IMPLEMENTS.value,
-                            arrowhead="empty"
+                            arrowhead="empty",
+                            **_coloring(i, k)
                         )
                     )
             if GraphEdge.DEPENDS_ON in edges:
@@ -181,7 +213,8 @@ class SimpleTypeIndex(NamedTuple):
                             k.__name__, d.type_.__name__,
                             label=GraphEdge.DEPENDS_ON.value,
                             arrowhead="open",
-                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ("*" if d.kind == DependencyKind.COLLECTIVE else "")
+                            headlabel="?" if d.kind == DependencyKind.OPTIONAL else ("*" if d.kind == DependencyKind.COLLECTIVE else ""),
+                            **_coloring(k, d)
                         )
                     )
             if GraphEdge.REQUIRES in edges:
@@ -191,7 +224,8 @@ class SimpleTypeIndex(NamedTuple):
                             k.__name__, r.__name__,
                             label=GraphEdge.REQUIRES.value,
                             style="dashed",
-                            arrowhead="open"
+                            arrowhead="open",
+                            **_coloring(k, r)
                         )
                     )
         return result

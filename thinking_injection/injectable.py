@@ -12,7 +12,7 @@ class Injectable(Initializable, Protocol):
     def inject_requirements[T](self, **dependencies: T) -> None: pass #todo -> inject(**)
 
     def __init_subclass__(cls, **kwargs):
-        discover(cls)
+        discover(cls) #fixme is this the best idea?
 
 
 InjectableType = type[Injectable]

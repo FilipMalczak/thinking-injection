@@ -101,10 +101,14 @@ class DependencyArityMismatch(DependencyValidationException):
 
 
 class NonePrimaryImplementationException(DependencyValidationException):
+    def __init__(self, target: type):
+        self.target = target
+        DependencyValidationException.__init__(self, f"No primary implementation for type {target} found")
+
     @classmethod
-    def guard[T](cls, to_inject: list[T]) -> list[T]:
+    def guard[T](cls, target: type[T], to_inject: list[T]) -> list[T]:
         if to_inject[0] is None:
-            raise cls()
+            raise cls(target)
         return to_inject
 
 
@@ -116,7 +120,7 @@ class KindDefinition(NastySingleton):# todo make it abc
         to use. May return invalid values - it will be validated by the next method.
         """
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         """
         Called immediately after choose_injected_types; should raise some exception if there is an incorrect state (e.g.
         any implementation was expected, but none were found, in case of simple dependency).
@@ -152,10 +156,10 @@ class SimpleDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
         return [ details.primary ]
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
-            guard(DependencyArityMismatch, to_inject, Arity.EXACTLY_ONE)
-            guard(NonePrimaryImplementationException, to_inject)
+            guard(DependencyArityMismatch, to_inject, Arity.EXACTLY_ONE) #todo add target to this exception
+            guard(NonePrimaryImplementationException, target, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0]
@@ -171,11 +175,11 @@ class OptionalDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return [ details.primary ] if details.primary else []
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
             guard(DependencyArityMismatch, to_inject, Arity.ZERO_OR_ONE)
             if to_inject:
-                guard(NonePrimaryImplementationException, to_inject)
+                guard(NonePrimaryImplementationException, target, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0] if values_to_inject else None
@@ -191,7 +195,7 @@ class CollectiveDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return list(details.implementations)
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
             guard(DependencyArityMismatch, to_inject, Arity.ANY_NUMBER)
         #todo check args not none

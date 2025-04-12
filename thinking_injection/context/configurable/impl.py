@@ -9,8 +9,7 @@ from thinking_injection.common.exceptions import UnknownTypesException
 from thinking_injection.context.configurable.configurator import ContextConfigurator, ConfiguratorPhaseMismatchException
 from thinking_injection.context.configurable.phase import ConfigurationPhase
 from thinking_injection.context.protocol import ApplicationContext, InstanceIndex
-from thinking_injection.context.simple import SimpleContext, _InstanceIndexLoopback
-from thinking_injection.exceptions import InvalidInternalTypeException
+from thinking_injection.context.simple import SimpleContext
 from thinking_injection.ordering import TypeComparator
 from thinking_injection.registry.delegating import TypeIndexUnion
 from thinking_injection.registry.protocol import DiscoveredTypes, TypeIndex
@@ -38,9 +37,9 @@ class ConfiguredIndex(InstanceIndex):
         self.configurators_index: InstanceIndex = None
         self.business_index: InstanceIndex = None
 
-    def instance[T](self, t: type[T]) -> Optional[T]:
+    def instance[T](self, t: type[T], *, required: bool = True) -> Optional[T]:
         index = self.configurators_index if is_configuration_item(t) else self.business_index
-        return index.instance(t)
+        return index.instance(t, required=required)
 
     def instances[T](self, t: type[T]) -> frozenset[T]:
         index = self.configurators_index if is_configuration_item(t) else self.business_index
@@ -128,7 +127,7 @@ class ConfigurableContext(ApplicationContext[ConfiguredIndex]):
         return self.configurators_context.known_types().union(self.business_context.known_types())
 
     def type_index(self) -> TypeIndex:
-        return TypeIndexUnion([self.configurators_context, self.business_context])
+        return TypeIndexUnion([self.configurators_context.type_index(), self.business_context.type_index()], ["configurators", "business"])
 
     def lifecycle(self) -> ConfiguredIndex:
         return ConfiguredIndex(self.configurators_context.clone(), self.business_context.clone())
