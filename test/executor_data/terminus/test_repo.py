@@ -1,8 +1,10 @@
 from datetime import date, datetime, time
 from functools import wraps
 from logging import getLogger
+from typing import Callable
 
-from black.trans import Callable
+from thinking_runtime.defaults.recognise_runtime import current_runtime
+
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
@@ -399,7 +401,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
 
 if __name__=="__main__":
-    # run_current_module()
+    run_current_module()
     # by_str()
     # by_datetime()
     # by_date()
@@ -408,4 +410,4 @@ if __name__=="__main__":
     # not_and_or()
     # condition_on_1_1_relation()
     # condition_on_value_container()
-    condition_on_1_n_relation()
+    # condition_on_1_n_relation()
