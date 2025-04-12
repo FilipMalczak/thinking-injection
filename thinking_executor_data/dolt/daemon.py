@@ -208,15 +208,16 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
 
     def _reconfigure(self):
         self._dolt_user = self._run_query("config", "--global", "--get", "user.name")
-        self._run_command("config", "--global", "--set", "user.name", "\""+self.daemon_config.user_config.username+"\"")
+        self._run_command("config", "--global", "--set", "user.name", self.daemon_config.user_config.username)
         self._dolt_email = self._run_query("config", "--global", "--get", "user.name")
-        self._run_command("config", "--global", "--set", "user.email", "\"" + self.daemon_config.user_config.email + "\"")
+        self._run_command("config", "--global", "--set", "user.email", self.daemon_config.user_config.email)
 
     def _deconfigure(self):
         if self._dolt_user:
-            self._run_command("config", "--global", "--set", "user.name", "\"" + self._dolt_user + "\"")
+            self._run_command("config", "--global", "--set", "user.name", self._dolt_user)
+        #todo else: unset; we want to leave the runtime with the same config state as when starting up
         if self._dolt_email:
-            self._run_command("config", "--global", "--set", "user.email", "\"" + self._dolt_email + "\"")
+            self._run_command("config", "--global", "--set", "user.email", self._dolt_email)
 
     def _init_repo(self):
         #todo cleanup repo_check and _run_check

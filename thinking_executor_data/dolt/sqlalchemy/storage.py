@@ -1,10 +1,10 @@
 from functools import wraps
-from logging import getLogger
 from typing import Iterable
 
-from mysql.connector import errorcode
+
 from sqlalchemy import ColumnExpressionArgument, Engine
 from pymysql.err import ProgrammingError as MySqlProgrammingError
+from pymysql.constants import ER
 from sqlalchemy.exc import ProgrammingError as SqlAlchemyProgrammingError
 from sqlalchemy.orm import Session
 
@@ -36,11 +36,11 @@ def create_schema_if_needed(repo):
             try:
                 return foo(*args, **kwargs)
             except MySqlProgrammingError as e:
-                if e.args[0] == errorcode.ER_NO_SUCH_TABLE:
+                if e.args[0] == ER.NO_SUCH_TABLE: #errorcode.ER_NO_SUCH_TABLE:
                     return _on_missing_table()
                 raise
             except SqlAlchemyProgrammingError as e:
-                if e.orig.args[0] == errorcode.ER_NO_SUCH_TABLE:
+                if e.orig.args[0] == ER.NO_SUCH_TABLE:
                     return _on_missing_table()
                 raise
 

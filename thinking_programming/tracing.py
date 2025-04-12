@@ -1,9 +1,9 @@
 from functools import wraps
 from logging import Logger, getLogger
 
-from sphinx.cmd.quickstart import suffix
 from thinking_tests.fluent_decorator import fluent_decorator
 
+#todo rethink whether this is needed at all
 
 @fluent_decorator
 def traced(logger_or_name: Logger | str = None):
