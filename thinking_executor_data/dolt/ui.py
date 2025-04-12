@@ -5,9 +5,9 @@ from os.path import abspath, join
 from thinking_containers.protocol import ContainerClient, Container, HostMount, LocalVolume
 from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
 from thinking_executor_data.dolt.daemon import DoltDaemon
-from thinking_injection.injectable import Injectable
 
-
+#todo drastically untested; useful during tests, though, to look up the DB state and confirm what actually happens
+# (if you manage to make a breakpoint before the dolt daemon is deinitialized)
 class DoltUi: #don't extend Injectable (they are automatically discovered)
     def __init__(self):
         self.containers: ContainerClient = None
