@@ -65,7 +65,7 @@ class TypeIndex(Protocol):
     def order(self) -> Iterable[ConcreteType]: pass
 
     # todo untested
-    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot: pass
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None, colors: dict[str, str]=None) -> Dot: pass
 
 
 @runtime_checkable

@@ -94,7 +94,7 @@ def expect_coordinates(versioning: SqlAlchemyDoltVersioning, *coordinates):
 @case
 def no_op_works():
     ctx = ConfigurableContext([
-        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt", "thinking_containers")
+        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt")
     ])
     with ctx.lifecycle() as idx:
         pass
@@ -102,7 +102,7 @@ def no_op_works():
 @case
 def just_create():
     ctx = ConfigurableContext([
-        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt", "thinking_containers")
+        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt")
     ])
     with ctx.lifecycle() as idx:
         executor = idx.instance(TaskExecutor)
@@ -156,7 +156,7 @@ for deleter in [
     @parametrized_case(params=deleter)
     def create_two_then_delete(d):
         ctx = ConfigurableContext([
-            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt", "thinking_containers")
+            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt")
         ])
         with ctx.lifecycle() as idx:
             executor = idx.instance(TaskExecutor)
@@ -235,7 +235,7 @@ for deleter in [
 @case
 def branches_are_correct():
     ctx = ConfigurableContext([
-        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt", "thinking_containers")
+        *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.dolt")
     ])
     with ctx.lifecycle() as idx:
         executor = idx.instance(TaskExecutor)
@@ -270,6 +270,6 @@ def branches_are_correct():
         expect_coordinates(versioning, ["top", "third"], [0, 2], TaskType.STEP)
 
 if __name__=="__main__":
-    run_current_module()
-    # just_create()
+    # run_current_module()
+    just_create()
     # create_two_then_delete()
