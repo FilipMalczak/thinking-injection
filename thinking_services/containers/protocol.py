@@ -3,9 +3,11 @@ from logging import getLogger
 from typing import Protocol, NamedTuple
 
 from thinking_injection.injectable import Injectable
+from thinking_programming.guard import Guard
 from thinking_programming.readwrite import ReadWrite
 from thinking_reflection.discovery import discover
 from thinking_reflection.interfaces import interface
+from thinking_services.logs import LogConsumer
 
 log = getLogger(__name__)
 
@@ -101,7 +103,8 @@ class ContainerClientProxy(ContainerClient, Injectable):
     def inject_requirements(self, factory: ContainerClientFactory):
         self.delegate = factory.client()
 
-    def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False):
+    def build(self, dir: str, filename: str, name: str, tag: str = "latest",
+              overwrite: bool = False, log_consumer: LogConsumer = Guard):
         return self.delegate.build(dir, filename, name, tag, overwrite)
 
     def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None, envvars: dict[str, str] = None) -> Container:

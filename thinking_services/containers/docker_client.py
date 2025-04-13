@@ -1,11 +1,11 @@
 from dataclasses import dataclass
+from enum import Enum
 from logging import getLogger
-from threading import Thread
-from time import sleep
 
 from docker.errors import ImageNotFound, NotFound
 
-from thinking_containers.protocol import Container, ContainerClient, ContainerClientFactory, Volumes, Ports, \
+from thinking_programming.guard import Guard
+from thinking_services.containers.protocol import Container, ContainerClient, ContainerClientFactory, Volumes, Ports, \
     ContainerStatus, VolumesClient, NamedVolume, VolumeDefinition, LocalVolume
 from thinking_programming.exceptions import UnreachableInstructionException
 
@@ -20,12 +20,15 @@ from thinking_programming.exceptions import UnreachableInstructionException
 # for the same reason we have test.containers.test_docker_client and not test.docker.<whatwever>
 
 import docker
+
+from thinking_services.logs import LogConsumer, consume_log_stream
+
 BackendContainer = docker.models.containers.Container
 BackendClient = docker.client.DockerClient
 
 
 log = getLogger(__name__)
-
+build_log = getLogger(__name__+".build")
 
 @dataclass
 class DockerContainer(Container):
@@ -58,10 +61,6 @@ class DockerContainer(Container):
         self.backend.wait()
         self.backend.remove()
 
-def stream_logs(container, logger):
-    for log in container.logs(stream=True):
-        logger.info(log.decode('utf-8').strip())
-
 class DockerVolumesClient(VolumesClient):
     def __init__(self, backend: BackendClient):
         self.backend: BackendClient = backend
@@ -91,8 +90,14 @@ class DockerClient(ContainerClient[DockerContainer]):
     def volumes(self) -> VolumesClient:
         return DockerVolumesClient(self.backend)
 
+    def _consumer(self, log_consumer: LogConsumer | None, logger_name: str, method_name: str = "debug") -> LogConsumer | None:
+        if log_consumer is Guard:
+            log_consumer = getattr(getLogger(logger_name), method_name)
+        return log_consumer
+
     #todo unused; probably should be deleted
-    def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False):
+    def build(self, dir: str, filename: str, name: str, tag: str = "latest",
+              overwrite: bool=False, log_consumer: LogConsumer = Guard):
         fullname = f"{name}:{tag}"
         exists = False
         try:
@@ -112,10 +117,9 @@ class DockerClient(ContainerClient[DockerContainer]):
                 dockerfile=filename,
                 tag=fullname
             )
-            l = getLogger("docker-build/"+fullname)
-            for line in logs:
-                x = line["stream"].strip()
-                l.info(x)
+            if log_consumer is not None:
+                log_consumer = self._consumer(log_consumer, __name__+".build."+name)
+                consume_log_stream(log_consumer, (line["stream"].strip() for line in logs))
 
     def _prepare_volume(self, definition: VolumeDefinition) -> str:
         if isinstance(definition, LocalVolume):
@@ -134,7 +138,13 @@ class DockerClient(ContainerClient[DockerContainer]):
             }
         return out
 
-    def run(self, img: str, *, name: str = None, cmd: str = None, volumes: Volumes = None, ports: Ports = None, envvars: dict[str, str | int] = None) -> DockerContainer:
+    def run(self, img: str, *,
+            name: str = None,
+            cmd: str = None,
+            volumes: Volumes = None,
+            ports: Ports = None,
+            envvars: dict[str, str | int] = None,
+            log_consumer: LogConsumer = Guard) -> DockerContainer:
         volumes = volumes or dict()
         v = self._prepare_volumes(volumes)
         p = ports or dict()
@@ -147,11 +157,11 @@ class DockerClient(ContainerClient[DockerContainer]):
         try:
             self.backend.images.get(img)
         except ImageNotFound:
-            l = getLogger("docker-pull/"+img)
-            l.debug(f"Image {img} not found, pulling")
+            log.debug(f"Image {img} not found, pulling")
             #todo customize exception that may be raised here (or dont?)
             self.backend.images.pull(repo, tag)
-            l.debug("Image pulled")
+            log.debug("Image pulled")
+            #todo it would be nice to get pull logs too
 
         envvars = envvars or dict()
         envvars = {
@@ -169,11 +179,10 @@ class DockerClient(ContainerClient[DockerContainer]):
             environment=envvars or dict(),
             extra_hosts={"host.docker.internal": "host-gateway"}
         )
-        #fixme not necessarily the best idea, but its useful when developing; add some control over that
 
-        # log_thread = Thread(target=stream_logs, args=(backend, getLogger("docker-run/"+backend.name)))
-        # log_thread.daemon = True
-        # log_thread.start()
+        if log_consumer is not None:
+            log_consumer = self._consumer(log_consumer, __name__+".run"+backend.name)
+            consume_log_stream(log_consumer, (line.decode("utf-8") for line in backend.logs(stream=True)))
         return DockerContainer(backend, volumes, p)
 
 class DockerFromEnvClientFactory(ContainerClientFactory[DockerClient]):

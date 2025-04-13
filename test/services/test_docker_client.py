@@ -9,8 +9,8 @@ from thinking_tests.current import current_case_name
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_containers.docker_client import DockerFromEnvClientFactory, UnixSocketDockerClientFactory
-from thinking_containers.protocol import ContainerClient
+from thinking_services.containers.docker_client import DockerFromEnvClientFactory, UnixSocketDockerClientFactory
+from thinking_services.containers.protocol import ContainerClient
 from thinking_injection.context.simple import SimpleContext
 from thinking_injection.typeset import from_package
 
@@ -22,7 +22,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     def test_running_echo_server_with_from_env():
-        with SimpleContext([*from_package("thinking_containers"), DockerFromEnvClientFactory]).lifecycle() as idx:
+        with SimpleContext([*from_package("thinking_services.containers"), DockerFromEnvClientFactory]).lifecycle() as idx:
             client = idx.instance(ContainerClient)
             container = client.run("hashicorp/http-echo", cmd=f"-text {current_case_name()}", ports={5678: 5678})
             try:
@@ -50,7 +50,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     def test_running_echo_server_with_unix_socket():
-        with SimpleContext([*from_package("thinking_containers"), UnixSocketDockerClientFactory]).lifecycle() as idx:
+        with SimpleContext([*from_package("thinking_services.containers"), UnixSocketDockerClientFactory]).lifecycle() as idx:
             client = idx.instance(ContainerClient)
             container = client.run("hashicorp/http-echo", cmd=f"-text {current_case_name()}", ports={5678: 5678})
             try:

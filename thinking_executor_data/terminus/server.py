@@ -8,7 +8,7 @@ from typing import NamedTuple, Protocol
 from thinking_runtime.defaults.recognise_runtime import current_runtime, RuntimeMode
 from thinking_tests.current import current_case_id
 
-from thinking_containers.protocol import Container, ContainerClient, HostMount, VolumeDefinition, LocalVolume, NamedVolume
+from thinking_services.containers.protocol import Container, ContainerClient, HostMount, VolumeDefinition, LocalVolume, NamedVolume
 from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
 from thinking_injection.injectable import Injectable
 from thinking_programming.names import make_uuid

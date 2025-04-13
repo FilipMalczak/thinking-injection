@@ -8,7 +8,7 @@ from thinking_runtime.defaults.recognise_runtime import current_runtime
 from thinking_tests.decorators import case
 from thinking_tests.running.start import run_current_module
 
-from thinking_containers.docker_client import DockerFromEnvClientFactory
+from thinking_services.containers.docker_client import DockerFromEnvClientFactory
 from thinking_executor.executor import TaskExecutor
 from thinking_executor_data.terminus.base import TerminusEntity
 from thinking_executor_data.terminus.graphql.deser import DESER
@@ -55,7 +55,7 @@ def fixture[E](data_maker: Callable[[], list[E]]):
             data = data_maker()
             t: type[E] = type(data[0])
             ctx = ConfigurableContext([
-                *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_containers"),
+                *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_services.containers"),
                 DockerFromEnvClientFactory
             ])
             with ctx.lifecycle() as idx:

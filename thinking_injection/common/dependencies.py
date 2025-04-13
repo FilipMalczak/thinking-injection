@@ -8,6 +8,7 @@ from thinking_injection.exceptions import InvalidInjectionPointException, Invali
 from thinking_injection.typeset import TypeSet
 from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, \
     UnreachableInstructionException, Group
+from thinking_programming.guard import Guard
 from thinking_programming.singleton import NastySingleton
 from thinking_reflection.interfaces import AnyType, ConcreteType
 
@@ -38,20 +39,8 @@ class Arity(Enum):
     ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
 
 
-class _Guard:
-    @classmethod
-    def _explain(cls):
-        UnreachableInstructionException.guard("This type shouldn't be constructed nor subclassed, its only supposed to be used for resolving Unions")
 
-    def __init__(self):
-        type(self)._explain()
-
-    @classmethod
-    def __init_subclass__(cls, **kwargs):
-        cls._explain()
-
-
-def _guard_len_equals(types: Iterable[type], l: int) -> list[type]:
+def Guard_len_equals(types: Iterable[type], l: int) -> list[type]:
     """
     :raise WrongIterableSizeException:
     """
@@ -68,7 +57,7 @@ def _nonthrowing_isinstance(*args) -> bool:
 
 
 #todo most likely unused
-def _guard_non_none[T](x: T, details: str) -> T:
+def Guard_non_none[T](x: T, details: str) -> T:
     """
     :raise NoneValueException:
     """
@@ -79,8 +68,8 @@ def flatten_types(*ts: type) -> list[type]:
     return [
         x
         # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
-        for x in Union[*ts, _Guard].__args__
-        if x not in (type(None), _Guard)
+        for x in Union[*ts, Guard].__args__
+        if x not in (type(None), Guard)
     ]
 
 
@@ -188,7 +177,7 @@ class OptionalDependency(KindDefinition):
         return _nonthrowing_isinstance(None, t) # "type is optional" aka "None can be an instance of this type"
 
     def unpack_hint(self, t: type) -> type:
-        return _guard_len_equals(flatten_types(t), 1)[0]
+        return Guard_len_equals(flatten_types(t), 1)[0]
 
 
 class CollectiveDependency(KindDefinition):
@@ -208,7 +197,7 @@ class CollectiveDependency(KindDefinition):
         return isinstance(t, GenericAlias) and t.__origin__ == list
 
     def unpack_hint(self, t: type) -> type:
-        return _guard_len_equals(flatten_types(*t.__args__), 1)[0]
+        return Guard_len_equals(flatten_types(*t.__args__), 1)[0]
 
 
 class DependencyKind(Enum):

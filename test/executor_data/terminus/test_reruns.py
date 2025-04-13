@@ -7,7 +7,7 @@ from thinking_tests.running.start import run_current_module
 
 from test.executor_data.terminus.model import DumbEntity
 from test.util import parametrized_case, NamedLambda
-from thinking_containers.docker_client import DockerFromEnvClientFactory
+from thinking_services.containers.docker_client import DockerFromEnvClientFactory
 from thinking_executor.executor import TaskExecutor
 from thinking_executor.executor_model import TaskCoordinates, TaskType
 from thinking_executor_data.terminus.storage import TerminusDbStorage, TerminusDbRepository, GraphQLFilter
@@ -88,7 +88,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     @case
     def no_op_works():
         ctx = ConfigurableContext([
-            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_containers"),
+            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_services.containers"),
             DockerFromEnvClientFactory
         ])
         log.info("INITIAL RUN")
@@ -102,7 +102,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     @case
     def just_create():
         ctx = ConfigurableContext([
-            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_containers"),
+            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_services.containers"),
             DockerFromEnvClientFactory
         ])
         e = None
@@ -185,7 +185,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
         @parametrized_case(params=deleter)
         def create_two_then_delete(d):
             ctx = ConfigurableContext([
-                *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_containers"),
+                *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_services.containers"),
                 DockerFromEnvClientFactory
             ])
             entities = []
@@ -307,7 +307,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     @case
     def branches_are_correct():
         ctx = ConfigurableContext([
-            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_containers"),
+            *from_packages("thinking_executor", "thinking_executor_data.common", "thinking_executor_data.terminus", "thinking_services.containers"),
             DockerFromEnvClientFactory
         ])
         log.info("INITIAL RUN")

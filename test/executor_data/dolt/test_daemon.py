@@ -17,9 +17,8 @@ def daemon_starts_up():
     ])
     with ctx.lifecycle() as idx:
         daemon = idx.instance(DoltDaemon)
-        #todo this test is using private methods
-        log.info(daemon._run_query("sql", "-q", "show databases;"))
-        thinking_db = daemon._run_query("sql", "-r", "csv", "-q", f"select schema_name from information_schema.schemata where schema_name = '{daemon.daemon_config.db_name}';")
+        log.info(daemon.executable.query("sql", "-q", "show databases;"))
+        thinking_db = daemon.executable.query("sql", "-r", "csv", "-q", f"select schema_name from information_schema.schemata where schema_name = '{daemon.daemon_config.db_name}';")
         expected = f"""SCHEMA_NAME
 {daemon.daemon_config.db_name}"""
 

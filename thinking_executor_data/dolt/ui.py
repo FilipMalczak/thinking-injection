@@ -2,7 +2,7 @@ import json
 from os import makedirs
 from os.path import abspath, join
 
-from thinking_containers.protocol import ContainerClient, Container, HostMount, LocalVolume
+from thinking_services.containers.protocol import ContainerClient, Container, HostMount, LocalVolume
 from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
 from thinking_executor_data.dolt.daemon import DoltDaemon
 
@@ -27,7 +27,10 @@ class DoltUi: #don't extend Injectable (they are automatically discovered)
     def _fill_connection_store(self):
         data = {
             "name": self.daemon.daemon_config.db_name,
-            "connectionUrl": self.daemon.connection_config.mysql_connection_str.replace("mysql+pymysql://", "mysql://").replace("localhost", "host.docker.internal"),
+            "connectionUrl": self.daemon.connection_config
+                            .mysql_connection_str
+                            .replace("mysql+pymysql://", "mysql://")
+                            .replace("localhost", "host.docker.internal"),
             "port": self.daemon.daemon_config.port,
             "hideDoltFeatures": False,
             "useSSL": False,
