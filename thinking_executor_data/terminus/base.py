@@ -26,6 +26,7 @@ SCHEMA_CONTAINERS = {
 class TerminusEntity(DocumentTemplate):
 
     # this cannot be a property, because DocumentTemplate does some internal fuckery and won't recognize the type
+    #
     # if this was @identifier.setter def identifier(self, val): ...
     # and we did x.identifier = "abc"
     # we'd get a type mismatch, as Terminus lib won't see the property type, will assume it None and will complain
@@ -51,7 +52,7 @@ class TerminusEntity(DocumentTemplate):
         Returns the actual ID, as presented in the dashboard.
         Assumes that val is of structure [trash][classname]/[id].
         Trash is usually something like "terminusdb://data/".
-        """
+        """ #todo trash seems to be a constant
         trash, prefix, the_id = val.partition(schema_id(cls)+"/")
         return the_id
 

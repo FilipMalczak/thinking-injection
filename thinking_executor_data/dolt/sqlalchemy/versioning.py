@@ -13,21 +13,6 @@ from thinking_reflection.discovery import discover
 log = getLogger(__name__)
 
 
-class DoltBranchNameAdapter(BranchNameAdapter):
-    # fixme disallow consecutive dashes in task coordinates, so that we can avoid name clashes
-
-    def to_branch_name(self, coordinates: TaskCoordinates) -> str:
-        if coordinates is None:
-            return "main"
-        # return str(coordinates).replace("@", "--").replace(":", "---")
-        return make_uuid()
-
-    def from_branch_name(self, branch_name: str) -> TaskCoordinates:
-        if branch_name == "main":
-            return None
-        #todo branch name may not be parsable; make TaskCoordinates.parse raise something dedicated and reraise it here as Unparsable...
-        return TaskCoordinates.parse(branch_name.replace("---", ":").replace("--", "@"))
-
 @discover
 class SqlAlchemyDoltVersioning(Versioning, Injectable):
     BRANCH_NAME_ADAPTER = UuidBranchNameAdapter()
@@ -40,7 +25,7 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def _call_procedure(self, proc_name: str, *args: str):
         statement = f"CALL {proc_name}({', '.join(map(lambda x: '\''+str(x)+'\'', args))})"
-        log.info("Calling procedure: |'"+statement+"|")
+        log.debug("Calling procedure: |'"+statement+"|")
         self.session.execute(text(statement))
 
     def name_adapter(self) -> BranchNameAdapter:
@@ -48,7 +33,7 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def current_branch(self) -> str:
         result = self.session.execute(text("SELECT active_branch();")).scalar()
-        log.info("Current branch is "+result)
+        log.debug("Current branch is "+result)
         return result
 
     def current_coordinates(self) -> TaskCoordinates:
@@ -60,9 +45,9 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def has_branch(self, coordinates: TaskCoordinates) -> bool:
         name = self.name_adapter().to_branch_name(coordinates)
-        log.info("Looking for branch "+name+" (coordinates: "+str(coordinates)+")")
+        log.debug("Looking for branch "+name+" (coordinates: "+str(coordinates)+")")
         found = self.session.execute(text(f"SELECT count(*) FROM dolt_branches WHERE name = '{name}'")).scalar() > 0
-        log.info("Found branch "+name+": "+str(found))
+        log.debug("Found branch "+name+": "+str(found))
         return found
 
     def new_branch(self, coordinates: TaskCoordinates):
@@ -76,7 +61,7 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
     def checkout(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
         self._call_procedure("DOLT_CHECKOUT", name)
-        log.info(f"Post-checkout branch is {self.current_branch()}")
+        log.debug(f"Post-checkout branch is {self.current_branch()}")
 
     def commit(self, comment: str = None):
         # DO NOT DO

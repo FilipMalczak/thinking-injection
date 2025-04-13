@@ -42,6 +42,7 @@ class PollingFailureException(InvalidStateException):
 
 def poll(pred: Predicate, retries: int, stepback_strategy: StepbackStrategy):
     """
+    It is recommended to use NamedPredicate instead of simple lambda, as it will make logs cleaner.
     :raises PollingFailureException:
     """
     success = False

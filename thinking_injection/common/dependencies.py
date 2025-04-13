@@ -56,14 +56,6 @@ def _nonthrowing_isinstance(*args) -> bool:
         return False
 
 
-#todo most likely unused
-def Guard_non_none[T](x: T, details: str) -> T:
-    """
-    :raise NoneValueException:
-    """
-    NoneValueException.guard(x, details)
-    return x
-
 def flatten_types(*ts: type) -> list[type]:
     return [
         x
@@ -138,7 +130,7 @@ class KindDefinition(NastySingleton):# todo make it abc
     def unpack_hint(self, t: type) -> type:
         """
         Only called if matches_hint(t) == True; used to strip the metadata (like Optional[X], list[X], etc) to the
-        dependendency type (X, in mentioned examples).
+        dependency type (X, in mentioned examples).
         """
 
 class SimpleDependency(KindDefinition):

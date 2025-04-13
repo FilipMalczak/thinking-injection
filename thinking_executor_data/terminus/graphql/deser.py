@@ -37,10 +37,10 @@ def not_implemented[T, R](arg: T) -> R:
 def identity[T](arg) -> T:
     return arg
 
+#date format is iso format, so no point in declaring it her, since its exposed as a method
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 TIME_FORMAT = "%H:%M:%SZ"
 
-#todo this requires lots of love
 DESER = {
     str: LambdaDeser(lambda s: '"'+s+'"', identity),
     int: LambdaDeser(str, int),

@@ -16,13 +16,12 @@ from thinking_programming.collectable import Collectable, collect
 from thinking_executor_data.common.storage import Storage, Repository, RepositoryMetadata, Find, Count, Exist, \
     ExistByIds, Delete
 from thinking_executor_data.common.writability import WritabilityManager
-from thinking_executor_data.dolt.sqlalchemy.base import Base
+from thinking_executor_data.dolt.sqlalchemy.base import SqlAlchemyEntity
 from thinking_programming.tracing import traced
 
 type SQLFilter = ColumnExpressionArgument
 
 logged = traced
-# logged = traced("trace."+__name__)
 
 def create_schema_if_needed(repo):
     def decorator(foo):
@@ -30,13 +29,13 @@ def create_schema_if_needed(repo):
         def wrapper(*args, **kwargs):
             def _on_missing_table():
                 # Base.metadata
-                Base.metadata.create_all(repo.session.bind)
+                SqlAlchemyEntity.metadata.create_all(repo.session.bind)
                 repo.versioning.commit("DDL")
                 return foo(*args, **kwargs)
             try:
                 return foo(*args, **kwargs)
             except MySqlProgrammingError as e:
-                if e.args[0] == ER.NO_SUCH_TABLE: #errorcode.ER_NO_SUCH_TABLE:
+                if e.args[0] == ER.NO_SUCH_TABLE:
                     return _on_missing_table()
                 raise
             except SqlAlchemyProgrammingError as e:
@@ -49,7 +48,7 @@ def create_schema_if_needed(repo):
     return decorator
 
 
-class DoltRepository[E: Base, ID](Repository[E, ID, SQLFilter]):
+class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
     def __init__(self, entity_type: type[E], session: Session, versioning: SqlAlchemyDoltVersioning, writability: WritabilityManager):
         self.entity_type: type[E] = entity_type
         self.session: Session = session
@@ -216,7 +215,7 @@ class DoltStorage(Injectable, Storage):
         self.writability = writability
 
     def supports_entity[E](self, t: type[E]) -> bool:
-        return issubclass(t, Base)
+        return issubclass(t, SqlAlchemyEntity)
 
     def repository[E, ID](self, t: type[E]) -> DoltRepository[E, ID]:
         return DoltRepository(t, self.session, self.versioning, self.writability)

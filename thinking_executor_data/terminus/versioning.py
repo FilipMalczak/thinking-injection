@@ -48,30 +48,30 @@ class TerminusDbVersioning(Injectable, Versioning):
 
     def new_branch(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
-        log.info(f"Creating branch {name} (coordinates: {coordinates})")
+        log.debug(f"Creating branch {name} (coordinates: {coordinates})")
         self.terminus.create_branch(name)
 
     def delete_branch(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
-        log.info(f"Deleting branch {name} (coordinates: {coordinates})")
+        log.debug(f"Deleting branch {name} (coordinates: {coordinates})")
         self.terminus.delete_branch(name)
 
     def checkout(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
-        log.info(f"Checking out branch {name} (coordinates: {coordinates})")
+        log.debug(f"Checking out branch {name} (coordinates: {coordinates})")
         assert self.has_branch(coordinates) #todo msg, microoptimization (pass name instead of coordinates)
         self.terminus.branch = name
         self._branch = name
         self._last_commited_branch = name
 
     def commit(self, comment: str = None):
-        log.info(f"Commiting to branch {self._branch}")
+        log.debug(f"Commiting to branch {self._branch}")
         self._last_commited_branch = self._branch
 
     def rollback(self):
-        log.info(f"Rolling back branch {self._branch}")
+        log.debug(f"Rolling back branch {self._branch}")
         if self.is_dirty():
-            log.info(f"Branch {self._branch} was dirty, reverting changes")
+            log.debug(f"Branch {self._branch} was dirty, reverting changes")
             rolled_back = self._branch
             self.terminus.branch = self._last_commited_branch
             self._branch = self._last_commited_branch

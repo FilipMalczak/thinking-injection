@@ -187,7 +187,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                 log.info(f"Task {coordinates} hasn't been executed yet")
             else:
                 log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
-                log.info("Rerunning nontheless, as it is a stage")
+                log.info(f"Rerunning {coordinates} nontheless, as it is a stage")
                 log.debug(f"Detailed execution log: {exec_log}")
             log.debug(f"Task arguments: {args}")
             try:

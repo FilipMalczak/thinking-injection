@@ -179,7 +179,7 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
     def _pymysql_check(self) -> bool:
         c = None
         try:
-            log.info(f"Trying to connect via PyMySQL to {self.connection_config.mysql_connection_str}")
+            log.debug(f"Trying to connect via PyMySQL to {self.connection_config.mysql_connection_str}")
             c = pymysql.connect(
                 # host=self.daemon_config.host,
                 host="localhost",
@@ -188,10 +188,10 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
                 password=self.daemon_config.user_config.sql_credentials.password,
                 database=self.daemon_config.db_name
             )
-            log.info("Connection established")
+            log.debug("Connection established")
             return True
         except DatabaseError as e:
-            log.error(f"Got a DatabaseError {e}")
+            log.debug(f"Got a DatabaseError {e}")
             return False
         finally:
             if c is not None:
@@ -199,7 +199,8 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
 
     def _healthcheck(self):
         poll(NamedPredicate("dolt sql -q ...", self._dolt_sql_check), 5, ConstantStepback(1))
-        poll(NamedPredicate("pymysql connect", self._pymysql_check), 5, ConstantStepback(1))
+        #retries number is higher for pymysql check - that's mostly for testing sake
+        poll(NamedPredicate("pymysql connect", self._pymysql_check), 10, ConstantStepback(1))
 
     def create_dolt_connection_config(self) -> DoltConectionConfig:
         return self.connection_config

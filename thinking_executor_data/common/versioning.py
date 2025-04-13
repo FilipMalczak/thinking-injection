@@ -18,8 +18,6 @@ class UnparsableBranchNameException(ValueError):
         ValueError.__init__(f"Branch name '{name}' cannot be parsed to TaskCoordinates")
 
 class BranchNameAdapter(Protocol):
-    #todo how to treat root coordinates? introduce TaskType=ROOT or accept/return None here?
-    # dolt uses None approach for now; terminus isnt guarded against it yet
     def to_branch_name(self, coordinates: TaskCoordinates | None) -> str: ...
 
     def from_branch_name(self, branch_name: str) -> TaskCoordinates | None:
@@ -70,7 +68,8 @@ class Versioning(Protocol):
 
     def commit(self, comment: str = None):
         """
-        Comment is strictly advisory; it can be freely ignored by the backend.
+        Comment is strictly advisory; it can be freely ignored by the backend. Usually it's gonna be used to form
+        the commit message, but it doesn't always need to be so (even though it is recommended).
         """
 
     def rollback(self): ...

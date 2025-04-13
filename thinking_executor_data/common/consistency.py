@@ -52,6 +52,7 @@ class ConsistentDataVersioningCallback(Injectable, StepExecutorCallback, Session
     def on_stage_finished(self, start: datetime, finish: datetime, coordinates: TaskCoordinates, outcome: Outcome):
         try:
             if self.versioning.is_dirty:
+                #todo default config for this kind of warnings? definitely make a good point in docs about it
                 warn(UnmanagedWritesWarning())
         except UnmanagedWritesWarning:
             self.versioning.rollback()
