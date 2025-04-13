@@ -2,6 +2,7 @@ from collections import defaultdict
 from logging import getLogger
 from os.path import abspath, join
 from random import randint
+from time import sleep
 from typing import NamedTuple, Protocol
 
 from thinking_runtime.defaults.recognise_runtime import current_runtime, RuntimeMode
@@ -108,6 +109,7 @@ class TerminusContainerLifecycle(Injectable):
                 "TERMINUSDB_ADMIN_PASS": self.container_config.admin.password
             }
         )
+        sleep(4) #fixme it should be replaced with a healthcheck, but I don't think I'm gonna invest in terminus, so no point in doing it now
 
     def deinitialize(self, exc: BaseException | None) -> None:
         self.container.stop()

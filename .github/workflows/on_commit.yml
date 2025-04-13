@@ -39,6 +39,7 @@ jobs:
       - name: Freeze requirements
         run: |
           pip freeze > ./frozen_requirements.txt
+          cat ./frozen_requirements.txt
       - name: Upload frozen requirements
         uses: actions/upload-artifact@v4
         with:
@@ -47,8 +48,8 @@ jobs:
       - name: Install Dolt
         uses: sebhoss/dolt-installer@v1
       - name: Run tests
-        run: | #macos runner doesn't seem to support Docker; disable tests that require docker on that runner 
-          [[ "${{ matrix.os }}" == "macos-latest" ]] && export DOCKER_DISABLED=1 || echo "Docker should be enabled"
+        run: | #macos runner doesn't seem to support Docker; disable tests that require docker on that runner; otherwise - report on docker version 
+          [[ "${{ matrix.os }}" == "macos-latest" ]] && export DOCKER_DISABLED=1 || docker version
           python -m test.run_all
       - name: Publish test report
         uses: dorny/test-reporter@v1

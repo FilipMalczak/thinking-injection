@@ -91,6 +91,7 @@ class DockerClient(ContainerClient[DockerContainer]):
     def volumes(self) -> VolumesClient:
         return DockerVolumesClient(self.backend)
 
+    #todo unused; probably should be deleted
     def build(self, dir: str, filename: str, name: str, tag: str = "latest", overwrite: bool=False):
         fullname = f"{name}:{tag}"
         exists = False
@@ -137,12 +138,17 @@ class DockerClient(ContainerClient[DockerContainer]):
         volumes = volumes or dict()
         v = self._prepare_volumes(volumes)
         p = ports or dict()
+        repo, colon, tag = img.rpartition(":")  # if tag is missing, then rpartition will return ('', '', img)
+        if not repo:
+            log.debug("Tag was missing, setting it to 'latest'")
+            repo = tag
+            tag = "latest"
+            img += ":" + tag
         try:
             self.backend.images.get(img)
         except ImageNotFound:
             l = getLogger("docker-pull/"+img)
-            l.debug("Image not found, pulling")
-            repo, colon, tag = img.rpartition(":")
+            l.debug(f"Image {img} not found, pulling")
             #todo customize exception that may be raised here (or dont?)
             self.backend.images.pull(repo, tag)
             l.debug("Image pulled")
@@ -168,7 +174,6 @@ class DockerClient(ContainerClient[DockerContainer]):
         # log_thread = Thread(target=stream_logs, args=(backend, getLogger("docker-run/"+backend.name)))
         # log_thread.daemon = True
         # log_thread.start()
-        sleep(4) #fixme there should be a better way to do this
         return DockerContainer(backend, volumes, p)
 
 class DockerFromEnvClientFactory(ContainerClientFactory[DockerClient]):

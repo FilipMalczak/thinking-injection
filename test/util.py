@@ -92,6 +92,7 @@ def parametrized_case(name=None, *, params=None, setup=None, teardown=None):
     return decorator
 
 #fixme bundled variant is broken
+#also, it fails when there are no tests in suite
 def run_current_package(predicate: Callable[[ThinkingCase], bool] = None,
                         *,
                         sorter: Callable[[list[ThinkingCase]], list[ThinkingCase]] = None) -> BackendResultType:

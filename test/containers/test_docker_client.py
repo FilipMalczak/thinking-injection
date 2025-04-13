@@ -1,6 +1,7 @@
 import urllib
 from http.client import HTTPException
 from logging import getLogger
+from time import sleep
 from urllib.error import URLError
 
 from thinking_runtime.defaults.recognise_runtime import current_runtime
@@ -17,6 +18,7 @@ log = getLogger(__name__)
 
 if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     #fixme this is a good candidate for parametrized case
+    # todo docker-py provides requests anyway; use that lib for these tests
 
     @case
     def test_running_echo_server_with_from_env():
@@ -35,7 +37,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
                             txt = resp.read().decode("utf-8").strip()
                             break
                     except HTTPException | URLError:
-                        pass
+                        sleep(1)
                 assert ok
                 assert txt == current_case_name(), f"Actual response: '{txt}'"
             finally:
@@ -47,7 +49,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
             assert True
 
     @case
-    def test_running_echo_server_with_unix_socker():
+    def test_running_echo_server_with_unix_socket():
         with SimpleContext([*from_package("thinking_containers"), UnixSocketDockerClientFactory]).lifecycle() as idx:
             client = idx.instance(ContainerClient)
             container = client.run("hashicorp/http-echo", cmd=f"-text {current_case_name()}", ports={5678: 5678})
@@ -63,7 +65,7 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
                             txt = resp.read().decode("utf-8").strip()
                             break
                     except HTTPException | URLError:
-                        pass
+                        sleep(1)
                 assert ok
                 assert txt == current_case_name(), f"Actual response: '{txt}'"
             finally:
@@ -75,5 +77,5 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
             assert True
 
 
-    if __name__ == "__main__":
-        run_current_module()
+if __name__ == "__main__":
+    run_current_module()
