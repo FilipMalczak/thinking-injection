@@ -31,8 +31,6 @@ class DoltUserConfig(NamedTuple):
 class DoltDaemonConfig(NamedTuple):
     data_dir: str
     port: int = 3306
-    # host: str = "0.0.0.0"
-    # host: str = "localhost"
     user_config: DoltUserConfig = DoltUserConfig()
     db_name: str = "thinking"
     command: str = "dolt"
@@ -75,9 +73,7 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
     def __init__(self):
         self.daemon_config: DoltDaemonConfig = None
         self.connection_config: DoltConectionConfig = None
-        # self.daemon_process: Popen = None
-        # self.log_thread: Thread = None
-        self.daemon_handle: Callable[[], int] = None
+        self.daemon_process: Popen = None
         self._dolt_user: str = None
         self._dolt_email: str = None
 
@@ -113,124 +109,89 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
         self._stop()
         self._deconfigure()
 
-    #fixme lots of copypasted code in _run_... methods - normalize it
-
-    def _popen_kwargs(self):
-        return dict(
+    def _subprocess(self, *cmd: str, blocking: bool = True) -> Popen:
+        full_cmd = [self.daemon_config.command] + list(cmd)
+        spawn = run if blocking else Popen
+        kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             encoding="utf-8",
             cwd=self.daemon_config.data_dir
         )
-
-    def _subprocess(self, *cmd: str, new_session: bool = False) -> Popen:
-        full_cmd = [self.daemon_config.command] + list(cmd)
-        if new_session:
-            full_cmd = " ".join(full_cmd)
-        log.info(f"Running: {full_cmd}")
-        result = run(
-            full_cmd,
-            **self._popen_kwargs()
-        )
-        return result
-
-    def _daemon_process(self, *cmd: str) -> Popen:
-        full_cmd = [self.daemon_config.command] + list(cmd)
-        # full_cmd = " ".join([self.daemon_config.command] + list(cmd))
-        log.info(f"Running: {full_cmd}")
-        result = Popen(
-            full_cmd,
-            **self._popen_kwargs(),
-            # shell=True,
-            start_new_session=True
-        )
+        if not blocking:
+            kwargs["start_new_session"] = True
+        log.debug(f"Running: {full_cmd}")
+        result = spawn(full_cmd, **kwargs)
         return result
 
     def _run_query(self, *cmd: str) -> str | None:
         result = self._subprocess(*cmd)
         if result.returncode == 0:
             return result.stdout.strip()
-        log.error(result.stdout.strip())
         return None
 
     def _run_check(self, *cmd: str) -> bool:
         result = self._subprocess(*cmd)
         log = getLogger("daemon.dolt." + cmd[0])
-        if result.returncode > 0:
-            # for line in result.stdout:
-            #     log.error(line.strip())
-            log.error(result.stdout.strip())
-        else:
-            log.info(result.stdout.strip()) #todo debug
         return result.returncode == 0
 
     def _run_command(self, *cmd: str):
         result = self._subprocess(*cmd)
-        if result.returncode > 0:
-            log = getLogger("daemon.dolt."+cmd[0])
-            # for line in result.stdout:
-            #     log.error(line.strip())
-            log.error(result.stdout.strip())
         assert result.returncode == 0
 
     def _run_daemon(self, *cmd: str, log_consumer: Callable[[str], None] = None) -> Callable[[], int]:
-        # daemon_process = []
-        # def run_daemon():
-        #     p = self._subprocess(*cmd, new_session=True)
-        #     daemon_process.append(p)
-        #     daemon_process[0].wait()
-        result = self._daemon_process(*cmd)
-        # result = self._subprocess(*cmd, new_session=True)
-        # def stream_logs(): ... #fixme
+        result = self._subprocess(*cmd, blocking=False)
         def stream_logs():
-            # while not daemon_process:
-            #     sleep(0.1) #todo must be doable in better fashion
-            # for line in daemon_process[0].stdout:
             for line in result.stdout:
                 log_consumer(line.strip())
-            # log_consumer(daemon_process[0].stdout)
 
-        # daemon_thread = Thread(target=run_daemon, daemon=True)
-        # daemon_thread.start()
         log_thread = Thread(target=stream_logs, daemon=True)
         log_thread.start()
         return result
 
-        # def handle():
-        #     daemon_process[0].terminate()
-        #     daemon_thread.join()
-        #     return daemon_process[0].returncode
-        #
-        # # sleep(3) #todo a better healthcheck
-        # # return result, log_thread
-        # return handle
 
     def _reconfigure(self):
+        """
+        We store previous values of config variables to revert the changes we apply here.
+        We use --global because we may be operating before the repo exists (so, there may be no context for --local).
+        """
         self._dolt_user = self._run_query("config", "--global", "--get", "user.name")
         self._run_command("config", "--global", "--set", "user.name", self.daemon_config.user_config.username)
         self._dolt_email = self._run_query("config", "--global", "--get", "user.name")
         self._run_command("config", "--global", "--set", "user.email", self.daemon_config.user_config.email)
 
     def _deconfigure(self):
+        """
+        See _reconfigure for explanations. This should revert the config changes.
+        """
         if self._dolt_user:
             self._run_command("config", "--global", "--set", "user.name", self._dolt_user)
-        #todo else: unset; we want to leave the runtime with the same config state as when starting up
+        else:
+            self._run_command("config", "--global", "--unset", "user.name")
         if self._dolt_email:
             self._run_command("config", "--global", "--set", "user.email", self._dolt_email)
+        else:
+            self._run_command("config", "--global", "--unset", "user.email")
 
-    def _init_repo(self):
-        #todo cleanup repo_check and _run_check
-        # initialized = self._run_check(self.daemon_config.repo_check)
-        initialized = False
-        dot_dolt = join(self.daemon_config.data_dir, ".dolt")
-        if exists(dot_dolt) and isdir(dot_dolt):
-            initialized = True
-        log.info(f"Dolt repo already initialized: {initialized}")
-        if not initialized:
-            self._run_command("init") #todo consider using --new-format and maybe --fun
-            return True
-        return False
+    def _init_repo(self) -> bool:
+        """
+        Returned value indicates whether the repo is new (True) or not.
+        Before returning should check the status of the repo (run repo_check command from the daemon config
+        and fail if it fails).
+        """
+        try:
+            initialized = False
+            dot_dolt = join(self.daemon_config.data_dir, ".dolt")
+            if exists(dot_dolt) and isdir(dot_dolt):
+                initialized = True
+            log.info(f"Dolt repo already initialized: {initialized}")
+            if not initialized:
+                self._run_command("init") #todo consider using --new-format and maybe --fun
+                return True
+            return False
+        finally:
+            assert self._run_check(*self.daemon_config.repo_check)
 
     def _init_sql(self):
         c = self.daemon_config
@@ -239,23 +200,14 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
         sqls = [
             f"CREATE DATABASE IF NOT EXISTS {c.db_name};",
             f"CREATE USER IF NOT EXISTS '{s.username}'@'%' IDENTIFIED BY '{s.password}';",
-            # f"CREATE USER IF NOT EXISTS '{s.username}'@'{c.host}' IDENTIFIED BY '{s.password}';",
             f"ALTER USER '{s.username}'@'%' IDENTIFIED BY '{s.password}';",
-            # f"ALTER USER '{s.username}'@'{c.host}' IDENTIFIED BY '{s.password}';",
             f"GRANT ALL ON *.* TO '{s.username}'@'%' WITH GRANT OPTION;"
-            # f"GRANT ALL ON *.* TO '{s.username}'@'{c.host}' WITH GRANT OPTION;"
         ]
         for sql in sqls:
-            # self._run_command("sql", "-q", '"'+sql+'"')
             self._run_command("sql", "-q", sql)
 
     def _start(self):
         self.daemon_process = self._run_daemon(
-        # self.daemon_process, self.log_thread = self._run_daemon(
-        # self.daemon_handle = self._run_daemon(
-            # f"sql-server -H % -P {self.daemon_config.port}",
-            # f"sql-server -H {self.daemon_config.host} -P {self.daemon_config.port}",
-            # f"sql-server -H 0.0.0.0 -P {self.daemon_config.port}",
             "sql-server", "-H", "0.0.0.0", "-P", str(self.daemon_config.port),
             log_consumer=getLogger("dolt-daemon").info
         )
@@ -263,8 +215,6 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
     def _stop(self):
         self.daemon_process.terminate()
         self.daemon_process.wait()
-        # code = self.daemon_handle()
-        # assert code == 0
         #dont do anything about log_thread - its a daemon anyway
 
     def _poll(self, cond: Callable[[], bool], retries: int, stepback: float):
@@ -284,8 +234,6 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
         #fixme this is useless - it will work in any directory, even the non-dolt ones; select from schemata instead?
         log.info(f"Checking 'dolt sql -q '{self.daemon_config.healthcheck_sql}'")
         return self._run_check("sql", "-q", self.daemon_config.healthcheck_sql)
-        # return self._run_check("sql", "-q", "'"+self.daemon_config.healthcheck_sql+"'")
-        # return self._run_check(f"sql -q '{self.daemon_config.healthcheck_sql}'")
 
     def _pymysql_check(self) -> bool:
         c = None

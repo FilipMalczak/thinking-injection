@@ -34,5 +34,8 @@ class WritabilityManager:
         self._access = ReadWrite.RO
 
     def require_writing(self, db: str=None):
+        """
+        :param db: Optional name of the database that is attempting a write operation. Used only for enhancing exeption message.
+        """
         if not self.can_write():
             raise WritingDisabledException(db)

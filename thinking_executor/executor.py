@@ -150,7 +150,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
 
         outcome = outcome_of(e)
 
-        log.info(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
+        log.error(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
         self.callbacks.on_task_finished(start, finish, coordinates, outcome)
         if not isinstance(e, ToBeContinuedException) or len(coordinates) > 1:
             return True
@@ -176,7 +176,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
 
         if exec_log is not None and task_type == TaskType.STEP:
             log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
-            log.info(f"Detailed execution log: {exec_log}")
+            log.debug(f"Detailed execution log: {exec_log}")
             self.stack[-1].next_subtask_order[-1] += 1
             # self.consistency_manager.skip(coordinates) #fixme
             self.callbacks.on_task_skipped(exec_log)
