@@ -12,7 +12,7 @@ from thinking_containers.docker_client import DockerFromEnvClientFactory
 from thinking_executor.executor import TaskExecutor
 from thinking_executor_data.terminus.base import TerminusEntity
 from thinking_executor_data.terminus.graphql.deser import DESER
-from thinking_executor_data.terminus.storage import TerminusDbRepository, TerminusDbStorage, GraphQLFilter
+from thinking_executor_data.terminus.storage import TerminusDbStorage, GraphQLFilter
 from thinking_injection.context.configurable.impl import ConfigurableContext
 from thinking_injection.typeset import from_packages
 
@@ -39,10 +39,17 @@ def prototype() -> AllSimpleTypes:
         t = time(11, 12, 13, 140)
     )
 
-
+Asserter = Callable[[GraphQLFilter, int, ...], None]
+"""
+Takes a filter and list of indexes (as varargs).
+Performs the query with given filter.
+Retrieves entities from the fixture by the indexes.
+Compares result of the query and retrieved entities by ID (as sets, unordered).
+Asserts that the comparison didn't find differences.
+"""
 
 def fixture[E](data_maker: Callable[[], list[E]]):
-    def decorate(checker: Callable[[TerminusDbRepository[E], list[E]], None]) -> Callable:
+    def decorate(checker: Callable[[Asserter], None]) -> Callable:
         @wraps(checker)
         def wrapper():
             data = data_maker()
@@ -62,29 +69,18 @@ def fixture[E](data_maker: Callable[[], list[E]]):
                         entities.extend(repo.save(data))
                     @executor.stage
                     def perform_checks():
-                        checker(repo, entities)
+                        def asserter(q: GraphQLFilter, *idxs: int):
+                            found = repo.find().where(q)
+                            expected = [data[x] for x in idxs]
+                            log.debug(f"Found:    {found}")
+                            log.debug(f"Expected: {expected}")
+                            # compare by ID, as Terminus cuts down milliseconds and the whole thing goes to... let's say "bed"
+                            found_ids = set(x.entity_id() for x in found)
+                            expected_ids = set(x.entity_id() for x in expected)
+                            assert found_ids == expected_ids, f"Found:\n{'\n'.join(map(str, found))}\nExpected:\n{'\n'.join(map(str, expected))}\nAll data:\n{'\n'.join(map(str, data))}"
+                        checker(asserter, entities)
         return wrapper
     return decorate
-
-def assert_find(repo: TerminusDbRepository[AllSimpleTypes], q: GraphQLFilter, *expected: AllSimpleTypes):
-    results = repo.find().where(q)
-    log.debug(f"Results: {results}")
-    log.debug(f"Expected: {list(expected)}")
-    # compare by ID, as Terminus cuts down milliseconds and the whole thing goes to... let's say "bed"
-    found_ids = set(x.entity_id() for x in results)
-    expected_ids = set(x.entity_id() for x in expected)
-    assert found_ids == expected_ids, f"Found:\n{'\n'.join(map(str, results))}\nExpected:\n{'\n'.join(map(str, expected))}"
-
-#todo rewrite all to use this variant
-def assert_find2(repo: TerminusDbRepository[AllSimpleTypes], q: GraphQLFilter, data: list[AllSimpleTypes], *idxs: int):
-    results = repo.find().where(q)
-    expected = [data[x] for x in idxs]
-    log.debug(f"Results: {results}")
-    log.debug(f"Expected: {expected}")
-    # compare by ID, as Terminus cuts down milliseconds and the whole thing goes to... let's say "bed"
-    found_ids = set(x.entity_id() for x in results)
-    expected_ids = set(x.entity_id() for x in expected)
-    assert found_ids == expected_ids, f"Found:\n{'\n'.join(map(str, results))}\nExpected:\n{'\n'.join(map(str, expected))}\nAll data:\n{'\n'.join(map(str, data))}"
 
 if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     def mutate_ints():
@@ -96,13 +92,13 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_ints)
-    def by_int(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
-        assert_find(repo, {"i": {"eq": "100"}}, entities[1])
-        assert_find(repo, {"i": {"ne": "100"}}, entities[0], entities[2])
-        assert_find(repo, {"i": {"lt": "100"}}, entities[0])
-        assert_find(repo, {"i": {"le": "100"}}, entities[0], entities[1])
-        assert_find(repo, {"i": {"gt": "100"}}, entities[2])
-        assert_find(repo, {"i": {"ge": "100"}}, entities[1], entities[2])
+    def by_int(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
+        assert_correct_result_idxs({"i": {"eq": "100"}}, 1)
+        assert_correct_result_idxs({"i": {"ne": "100"}}, 0, 2)
+        assert_correct_result_idxs({"i": {"lt": "100"}}, 0)
+        assert_correct_result_idxs({"i": {"le": "100"}}, 0, 1)
+        assert_correct_result_idxs({"i": {"gt": "100"}}, 2)
+        assert_correct_result_idxs({"i": {"ge": "100"}}, 1, 2)
 
 
     def mutate_floats():
@@ -114,13 +110,13 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_floats)
-    def by_float(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
-        assert_find(repo, {"f": {"eq": "200.0"}}, entities[1])
-        assert_find(repo, {"f": {"ne": "200.0"}}, entities[0], entities[2])
-        assert_find(repo, {"f": {"lt": "200.0"}}, entities[0])
-        assert_find(repo, {"f": {"le": "200.0"}}, entities[0], entities[1])
-        assert_find(repo, {"f": {"gt": "200.0"}}, entities[2])
-        assert_find(repo, {"f": {"ge": "200.0"}}, entities[1], entities[2])
+    def by_float(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
+        assert_correct_result_idxs({"f": {"eq": "200.0"}}, 1)
+        assert_correct_result_idxs({"f": {"ne": "200.0"}}, 0, 2)
+        assert_correct_result_idxs({"f": {"lt": "200.0"}}, 0)
+        assert_correct_result_idxs({"f": {"le": "200.0"}}, 0, 1)
+        assert_correct_result_idxs({"f": {"gt": "200.0"}}, 2)
+        assert_correct_result_idxs({"f": {"ge": "200.0"}}, 1, 2)
 
 
     def mutate_bools():
@@ -132,11 +128,11 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_bools)
-    def by_bool(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
-        assert_find(repo, {"b": {"eq": True}}, entities[0])
-        assert_find(repo, {"b": {"ne": True}}, entities[1])
-        assert_find(repo, {"b": {"eq": False}}, entities[1])
-        assert_find(repo, {"b": {"ne": False}}, entities[0])
+    def by_bool(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
+        assert_correct_result_idxs({"b": {"eq": True}}, 0)
+        assert_correct_result_idxs({"b": {"ne": True}}, 1)
+        assert_correct_result_idxs({"b": {"eq": False}}, 1)
+        assert_correct_result_idxs({"b": {"ne": False}}, 0)
 
 
     def mutate_strs():
@@ -154,30 +150,30 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_strs)
-    def by_str(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
+    def by_str(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
         #todo check sorting of strings representing numbers (e[0].s = "1", e[1].s = "2", ... -1, 100, etc)
-        assert_find(repo, {"s": {"eq": "foo"}}, entities[0])
-        assert_find(repo, {"s": {"ne": "foo"}}, *entities[1:])
+        assert_correct_result_idxs({"s": {"eq": "foo"}}, 0)
+        assert_correct_result_idxs({"s": {"ne": "foo"}},*range(1, 8))
         # Foo, fo, bar, Bar, Gar
-        assert_find(repo, {"s": {"lt": "foo"}}, entities[1], entities[3], entities[4], entities[5], entities[7])
-        assert_find(repo, {"s": {"le": "foo"}}, entities[0], entities[1], entities[3], entities[4], entities[5], entities[7])
+        assert_correct_result_idxs({"s": {"lt": "foo"}}, 1, 3, 4, 5, 7)
+        assert_correct_result_idxs({"s": {"le": "foo"}}, 0, 1, 3, 4, 5, 7)
         # fooBar, gar
-        assert_find(repo, {"s": {"gt": "foo"}}, entities[2], entities[6])
-        assert_find(repo, {"s": {"ge": "foo"}}, entities[0], entities[2], entities[6])
+        assert_correct_result_idxs({"s": {"gt": "foo"}}, 2, 6)
+        assert_correct_result_idxs({"s": {"ge": "foo"}}, 0, 2, 6)
 
-        assert_find(repo, {"s": {"startsWith": "fo"}}, entities[0], entities[2], entities[3])
+        assert_correct_result_idxs({"s": {"startsWith": "fo"}}, 0, 2, 3)
 
         #clearly, the 'regex' operator means 'search' and not 'match'
         #foo, fooBar, fo
-        assert_find(repo, {"s": {"regex": "fo.*"}}, entities[0], entities[2], entities[3])
-        assert_find(repo, {"s": {"regex": "fo"}}, entities[0], entities[2], entities[3])
+        assert_correct_result_idxs({"s": {"regex": "fo.*"}}, 0, 2, 3)
+        assert_correct_result_idxs({"s": {"regex": "fo"}}, 0, 2, 3)
         #foo, Foo, fo
-        assert_find(repo, {"s": {"regex": "(f|F)oo?$"}}, entities[0], entities[1], entities[3])
-        assert_find(repo, {"s": {"regex": "(f|F)o[o]{0,1}$"}}, entities[0], entities[1], entities[3])
+        assert_correct_result_idxs({"s": {"regex": "(f|F)oo?$"}}, 0, 1, 3)
+        assert_correct_result_idxs({"s": {"regex": "(f|F)o[o]{0,1}$"}}, 0, 1, 3)
         #foo, Foo, fooBar
-        assert_find(repo, {"s": {"regex": "oo"}}, *entities[0:3])
+        assert_correct_result_idxs({"s": {"regex": "oo"}}, *range(3))
         #nada
-        assert_find(repo, {"s": {"regex": "^oo"}}, )
+        assert_correct_result_idxs({"s": {"regex": "^oo"}})
 
         #todo what the (pick your own curse) are allOfTerms and anyOfTerms?
 
@@ -201,18 +197,18 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
     #
     # @case
     # @fixture(mutate_datetime)
-    # def by_datetime(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
+    # def by_datetime(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
     #     pivot = DESER[datetime].serialize(entities[1].dt)
-    #     assert_find2(repo, {"dt": {"eq": pivot}}, entities, 1)
-    #     assert_find2(repo, {"dt": {"ne": pivot}}, entities, 0, 2)
+    #     assert_correct_result_idxs({"dt": {"eq": pivot}}, 1)
+    #     assert_correct_result_idxs({"dt": {"ne": pivot}}, 0, 2)
     #
     #     #todo this is weird - seems like Terminus compares datetime as "how far int he past"
     #     #you'd expect [1, ]2 for ge/gt and 0[, 1] for lt/le
-    #     assert_find2(repo, {"dt": {"gt": pivot}}, entities, 0)
-    #     assert_find2(repo, {"dt": {"ge": pivot}}, entities, 0, 1)
+    #     assert_correct_result_idxs({"dt": {"gt": pivot}}, 0)
+    #     assert_correct_result_idxs({"dt": {"ge": pivot}}, 0, 1)
     #
-    #     assert_find2(repo, {"dt": {"lt": pivot}}, entities, 2)
-    #     assert_find2(repo, {"dt": {"le": pivot}}, entities, 1, 2)
+    #     assert_correct_result_idxs({"dt": {"lt": pivot}}, 2)
+    #     assert_correct_result_idxs({"dt": {"le": pivot}}, 1, 2)
 
     def mutate_date():
         #from date(2020, 5, 10)
@@ -226,19 +222,18 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_date)
-    def by_date(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
+    def by_date(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
         pivot = DESER[date].serialize(entities[1].d)
         # pivot = "2020-05-10"
-        assert_find2(repo, {"d": {"eq": pivot}}, entities, 1)
-        assert_find2(repo, {"d": {"ne": pivot}}, entities, 0, 2)
+        assert_correct_result_idxs({"d": {"eq": pivot}}, 1)
+        assert_correct_result_idxs({"d": {"ne": pivot}}, 0, 2)
 
-        assert_find2(repo, {"d": {"lt": pivot}}, entities, 0)
-        assert_find2(repo, {"d": {"le": pivot}}, entities, 0, 1)
+        assert_correct_result_idxs({"d": {"lt": pivot}}, 0)
+        assert_correct_result_idxs({"d": {"le": pivot}}, 0, 1)
 
-        assert_find2(repo, {"d": {"gt": pivot}}, entities, 2)
-        assert_find2(repo, {"d": {"ge": pivot}}, entities, 1, 2)
-        #GraphQL UI in Terminus dashboard shows that you can apply any string operators to dates, but if you do, you
-        # 'll get an error
+        assert_correct_result_idxs({"d": {"gt": pivot}}, 2)
+        assert_correct_result_idxs({"d": {"ge": pivot}}, 1, 2)
+        #GraphQL UI in Terminus dashboard shows that you can apply any string operators to dates, but if you do, you'll get an error
 
 
     def mutate_time():
@@ -253,17 +248,17 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(mutate_time)
-    def by_time(repo: TerminusDbRepository[AllSimpleTypes], entities: list[AllSimpleTypes]):
+    def by_time(assert_correct_result_idxs: Asserter, entities: list[AllSimpleTypes]):
         pivot = DESER[time].serialize(entities[1].t)
         # pivot = "11:12:13.140"
-        assert_find2(repo, {"t": {"eq": pivot}}, entities, 1)
-        assert_find2(repo, {"t": {"ne": pivot}}, entities, 0, 2)
+        assert_correct_result_idxs({"t": {"eq": pivot}}, 1)
+        assert_correct_result_idxs({"t": {"ne": pivot}}, 0, 2)
 
-        assert_find2(repo, {"t": {"lt": pivot}}, entities, 0)
-        assert_find2(repo, {"t": {"le": pivot}}, entities, 0, 1)
+        assert_correct_result_idxs({"t": {"lt": pivot}}, 0)
+        assert_correct_result_idxs({"t": {"le": pivot}}, 0, 1)
 
-        assert_find2(repo, {"t": {"gt": pivot}}, entities, 2)
-        assert_find2(repo, {"t": {"ge": pivot}}, entities, 1, 2)
+        assert_correct_result_idxs({"t": {"gt": pivot}}, 2)
+        assert_correct_result_idxs({"t": {"ge": pivot}}, 1, 2)
         # ditto as date; GraphQL UI hints at str operators, which yield errors
         # todo tests that show that terminus cuts down milliseconds
 
@@ -287,30 +282,30 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(make_grid)
-    def and_or(repo: TerminusDbRepository[TwoInts], entities: list[TwoInts]):
-        assert_find2(repo, {"_or": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}, entities, 1, 3, 4, 5, 7)
-        assert_find2(repo, {"_and": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}, entities, 4)
-        assert_find2(repo, {"_or": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}, entities, 3, 4, 5, 6, 7, 8)
-        assert_find2(repo, {"_and": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}, entities)
+    def and_or(assert_correct_result_idxs: Asserter, entities: list[TwoInts]):
+        assert_correct_result_idxs({"_or": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}, 1, 3, 4, 5, 7)
+        assert_correct_result_idxs({"_and": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}, 4)
+        assert_correct_result_idxs({"_or": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}, 3, 4, 5, 6, 7, 8)
+        assert_correct_result_idxs({"_and": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]})
         # phrasing the filter like this isn't supported by Terminus
-        # assert_find2(repo, {"i": {"_or": [{"eq": "1"}, {"eq": "2"}]}}, entities, 3, 4, 5, 6, 7, 8)
+        # assert_correct_result_idxs({"i": {"_or": [{"eq": "1"}, {"eq": "2"}]}}, 3, 4, 5, 6, 7, 8)
 
         # columns 0 and 2, row 1
-        assert_find2(repo, {"_or": [{"i": {"eq": "1"}}, {"_not": {"j": {"eq": "1"}}}]}, entities, 0, 2, 3, 4, 5, 6, 8)
+        assert_correct_result_idxs({"_or": [{"i": {"eq": "1"}}, {"_not": {"j": {"eq": "1"}}}]}, 0, 2, 3, 4, 5, 6, 8)
         # rows 0 and 2, column 1
-        assert_find2(repo, {"_or": [{"_not": {"i": {"eq": "1"}}}, {"j": {"eq": "1"}}]}, entities, 0, 1, 2, 4, 6, 7, 8)
+        assert_correct_result_idxs({"_or": [{"_not": {"i": {"eq": "1"}}}, {"j": {"eq": "1"}}]}, 0, 1, 2, 4, 6, 7, 8)
         # all but 4
-        assert_find2(repo, {"_or": [{"_not": {"i": {"eq": "1"}}}, {"_not": {"j": {"eq": "1"}}}]}, entities, 0, 1, 2, 3, 5, 6, 7, 8)
+        assert_correct_result_idxs({"_or": [{"_not": {"i": {"eq": "1"}}}, {"_not": {"j": {"eq": "1"}}}]}, 0, 1, 2, 3, 5, 6, 7, 8)
 
 
     #todo test negating simple conditions
     @case
     @fixture(make_grid)
-    def not_and_or(repo: TerminusDbRepository[TwoInts], entities: list[TwoInts]):
-        assert_find2(repo, {"_not": {"_or": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}}, entities, 0, 2, 6, 8)
-        assert_find2(repo, {"_not": {"_and": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}}, entities, 0, 1, 2, 3, 5, 6, 7, 8)
-        assert_find2(repo, {"_not": {"_or": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}}, entities, 0, 1, 2)
-        assert_find2(repo, {"_not": {"_and": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}}, entities, *list(range(9)))
+    def not_and_or(assert_correct_result_idxs: Asserter, entities: list[TwoInts]):
+        assert_correct_result_idxs({"_not": {"_or": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}}, 0, 2, 6, 8)
+        assert_correct_result_idxs({"_not": {"_and": [{"i": {"eq": "1"}}, {"j": {"eq": "1"}}]}}, 0, 1, 2, 3, 5, 6, 7, 8)
+        assert_correct_result_idxs({"_not": {"_or": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}}, 0, 1, 2)
+        assert_correct_result_idxs({"_not": {"_and": [{"i": {"eq": "1"}}, {"i": {"eq": "2"}}]}}, *range(9))
 
     class PointsToTwoInts(TerminusEntity):
         point: TwoInts
@@ -325,13 +320,13 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(indirect_grid)
-    def condition_on_1_1_relation(repo: TerminusDbRepository[PointsToTwoInts], entities: list[PointsToTwoInts]):
-        assert_find2(repo, {"point": {"i": {"eq": "1"}}}, entities, 3, 4, 5)
-        assert_find2(repo, {"point": {"i": {"ne": "1"}}}, entities, 0, 1, 2, 6, 7, 8)
-        assert_find2(repo, {"point": {"i": {"lt": "1"}}}, entities, 0, 1, 2)
-        assert_find2(repo, {"point": {"i": {"le": "1"}}}, entities, 0, 1, 2, 3, 4, 5)
-        assert_find2(repo, {"point": {"i": {"gt": "1"}}}, entities, 6, 7, 8)
-        assert_find2(repo, {"point": {"i": {"ge": "1"}}}, entities, 3, 4, 5, 6, 7, 8)
+    def condition_on_1_1_relation(assert_correct_result_idxs: Asserter, entities: list[PointsToTwoInts]):
+        assert_correct_result_idxs({"point": {"i": {"eq": "1"}}}, 3, 4, 5)
+        assert_correct_result_idxs({"point": {"i": {"ne": "1"}}}, 0, 1, 2, 6, 7, 8)
+        assert_correct_result_idxs({"point": {"i": {"lt": "1"}}}, 0, 1, 2)
+        assert_correct_result_idxs({"point": {"i": {"le": "1"}}}, 0, 1, 2, 3, 4, 5)
+        assert_correct_result_idxs({"point": {"i": {"gt": "1"}}}, 6, 7, 8)
+        assert_correct_result_idxs({"point": {"i": {"ge": "1"}}}, 3, 4, 5, 6, 7, 8)
 
     class ListOfInts(TerminusEntity):
         ints: list[int]
@@ -344,27 +339,27 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(sliding_window)
-    def condition_on_value_container(repo: TerminusDbRepository[ListOfInts], entities: list[ListOfInts]):
-        assert_find2(repo, {"ints": {"someHave": {"gt": "2"}}}, entities, 2, 3)
-        assert_find2(repo, {"ints": {"allHave": {"gt": "2"}}}, entities, 3)
+    def condition_on_value_container(assert_correct_result_idxs: Asserter, entities: list[ListOfInts]):
+        assert_correct_result_idxs({"ints": {"someHave": {"gt": "2"}}}, 2, 3)
+        assert_correct_result_idxs({"ints": {"allHave": {"gt": "2"}}}, 3)
 
-        assert_find2(repo, {"ints": {"someHave": {"eq": "1"}}}, entities, 0, 1)
-        assert_find2(repo, {"ints": {"allHave": {"eq": "1"}}}, entities)
+        assert_correct_result_idxs({"ints": {"someHave": {"eq": "1"}}}, 0, 1)
+        assert_correct_result_idxs({"ints": {"allHave": {"eq": "1"}}})
 
-        assert_find2(repo, {"ints": {"someHave": {"ne": "1"}}}, entities, 0, 1, 2, 3)
-        assert_find2(repo, {"ints": {"allHave": {"ne": "1"}}}, entities, 2, 3)
+        assert_correct_result_idxs({"ints": {"someHave": {"ne": "1"}}}, 0, 1, 2, 3)
+        assert_correct_result_idxs({"ints": {"allHave": {"ne": "1"}}}, 2, 3)
 
-        assert_find2(repo, {"_not": {"ints": {"someHave": {"eq": "1"}}}}, entities, 2, 3)
-        assert_find2(repo, {"_not": {"ints": {"allHave": {"eq": "1"}}}}, entities, 0, 1, 2, 3)
+        assert_correct_result_idxs({"_not": {"ints": {"someHave": {"eq": "1"}}}}, 2, 3)
+        assert_correct_result_idxs({"_not": {"ints": {"allHave": {"eq": "1"}}}}, 0, 1, 2, 3)
 
         #todo or, and
 
         # phrasing the filter like this isn't supported by Terminus
-        # assert_find2(repo, {"ints": {"someHave": {"_not": {"eq": "1"}}}}, entities, 0, 1, 2, 3)
-        # assert_find2(repo, {"ints": {"allHave": {"_not": {"eq": "1"}}}}, entities, 2, 3)
+        # assert_correct_result_idxs({"ints": {"someHave": {"_not": {"eq": "1"}}}}, 0, 1, 2, 3)
+        # assert_correct_result_idxs({"ints": {"allHave": {"_not": {"eq": "1"}}}}, 2, 3)
 
-        # assert_find2(repo, {"ints": {"_not": {"someHave": {"eq": "1"}}}}, entities, 2, 3)
-        # assert_find2(repo, {"ints": {"_not": {"allHave": {"eq": "1"}}}}, entities, 0, 1, 2, 3)
+        # assert_correct_result_idxs({"ints": {"_not": {"someHave": {"eq": "1"}}}}, 2, 3)
+        # assert_correct_result_idxs({"ints": {"_not": {"allHave": {"eq": "1"}}}}, 0, 1, 2, 3)
 
     class ListOfPairs(TerminusEntity):
         pairs: list[TwoInts]
@@ -390,21 +385,21 @@ if "DOCKER_DISABLED" not in current_runtime().facets.by_name:
 
     @case
     @fixture(row_column_and_diagonal)
-    def condition_on_1_n_relation(repo: TerminusDbRepository[ListOfPairs], entities: list[ListOfPairs]):
+    def condition_on_1_n_relation(assert_correct_result_idxs: Asserter, entities: list[ListOfPairs]):
         #all the commented out variants won't work - they either return incorrect results or response is {"data": null}
         #todo I may wanna try modeling embedded objects as subdocuments instead of relationships
         #anyway, Terminus will work for simple documents, but 1-n relations are screwed - hence another approach to Dolt
-        assert_find2(repo, {"pairs": {"allHave": {"i": {"eq": "0"}}}}, entities, 0)
-        # assert_find2(repo, {"pairs": {"allHave": {"j": {"eq": "0"}}}}, entities, 1)
-        assert_find2(repo, {"pairs": {"allHave": {"_or": [{"i": {"eq": "0"}}]}}}, entities, 0)
-        # assert_find2(repo, {"pairs": {"allHave": {"_or": [{"i": {"eq": "0"}}, {"j": {"eq": "0"}}]}}}, entities, 0, 1)
-        # assert_find2(repo, {"_or": [
+        assert_correct_result_idxs({"pairs": {"allHave": {"i": {"eq": "0"}}}}, 0)
+        # assert_correct_result_idxs({"pairs": {"allHave": {"j": {"eq": "0"}}}}, 1)
+        assert_correct_result_idxs({"pairs": {"allHave": {"_or": [{"i": {"eq": "0"}}]}}}, 0)
+        # assert_correct_result_idxs({"pairs": {"allHave": {"_or": [{"i": {"eq": "0"}}, {"j": {"eq": "0"}}]}}}, 0, 1)
+        # assert_correct_result_idxs({"_or": [
         #     {"pairs": {"allHave": {"i": {"eq": "0"}}}},
         #     {"pairs": {"allHave": {"j": {"eq": "0"}}}}
-        # ]}, entities, 0, 1)
-        # assert_find2(repo, {"pairs": {"someHave": {"j": {"ge": "1"}}}}, entities, 1, 2)
-        # assert_find2(repo, {"pairs": {"someHave": {"j": {"eq": "2"}}}}, entities, 1, 2)
-        # assert_find2(repo, {"_not": {"pairs": {"allHave": {"i": {"eq": "0"}}}}}, entities)
+        # ]}, 0, 1)
+        # assert_correct_result_idxs({"pairs": {"someHave": {"j": {"ge": "1"}}}}, 1, 2)
+        # assert_correct_result_idxs({"pairs": {"someHave": {"j": {"eq": "2"}}}}, 1, 2)
+        # assert_correct_result_idxs({"_not": {"pairs": {"allHave": {"i": {"eq": "0"}}}}})
 
 
 if __name__=="__main__":
