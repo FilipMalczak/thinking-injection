@@ -8,6 +8,7 @@ from thinking_injection.exceptions import InvalidInjectionPointException, Invali
 from thinking_injection.typeset import TypeSet
 from thinking_programming.exceptions import WrongIterableSizeException, NoneValueException, \
     UnreachableInstructionException, Group
+from thinking_programming.guard import Guard
 from thinking_programming.singleton import NastySingleton
 from thinking_reflection.interfaces import AnyType, ConcreteType
 
@@ -38,27 +39,6 @@ class Arity(Enum):
     ANY_NUMBER = ImplementationArity.of(lambda x: x >= 0)
 
 
-class _Guard:
-    @classmethod
-    def _explain(cls):
-        UnreachableInstructionException.guard("This type shouldn't be constructed nor subclassed, its only supposed to be used for resolving Unions")
-
-    def __init__(self):
-        type(self)._explain()
-
-    @classmethod
-    def __init_subclass__(cls, **kwargs):
-        cls._explain()
-
-
-def _guard_len_equals(types: Iterable[type], l: int) -> list[type]:
-    """
-    :raise WrongIterableSizeException:
-    """
-    out = list(types)
-    WrongIterableSizeException.guard(out, l)
-    return out
-
 
 def _nonthrowing_isinstance(*args) -> bool:
     try:
@@ -67,20 +47,12 @@ def _nonthrowing_isinstance(*args) -> bool:
         return False
 
 
-#todo most likely unused
-def _guard_non_none[T](x: T, details: str) -> T:
-    """
-    :raise NoneValueException:
-    """
-    NoneValueException.guard(x, details)
-    return x
-
 def flatten_types(*ts: type) -> list[type]:
     return [
         x
         # this turns t to Union and flattens it, no matter if its a single type, Optional, |-style optional or already an union
-        for x in Union[*ts, _Guard].__args__
-        if x not in (type(None), _Guard)
+        for x in Union[*ts, Guard].__args__
+        if x not in (type(None), Guard)
     ]
 
 
@@ -101,10 +73,14 @@ class DependencyArityMismatch(DependencyValidationException):
 
 
 class NonePrimaryImplementationException(DependencyValidationException):
+    def __init__(self, target: type):
+        self.target = target
+        DependencyValidationException.__init__(self, f"No primary implementation for type {target} found")
+
     @classmethod
-    def guard[T](cls, to_inject: list[T]) -> list[T]:
+    def guard[T](cls, target: type[T], to_inject: list[T]) -> list[T]:
         if to_inject[0] is None:
-            raise cls()
+            raise cls(target)
         return to_inject
 
 
@@ -116,7 +92,7 @@ class KindDefinition(NastySingleton):# todo make it abc
         to use. May return invalid values - it will be validated by the next method.
         """
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         """
         Called immediately after choose_injected_types; should raise some exception if there is an incorrect state (e.g.
         any implementation was expected, but none were found, in case of simple dependency).
@@ -145,17 +121,17 @@ class KindDefinition(NastySingleton):# todo make it abc
     def unpack_hint(self, t: type) -> type:
         """
         Only called if matches_hint(t) == True; used to strip the metadata (like Optional[X], list[X], etc) to the
-        dependendency type (X, in mentioned examples).
+        dependency type (X, in mentioned examples).
         """
 
 class SimpleDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> list[ConcreteType]:
         return [ details.primary ]
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
-            guard(DependencyArityMismatch, to_inject, Arity.EXACTLY_ONE)
-            guard(NonePrimaryImplementationException, to_inject)
+            guard(DependencyArityMismatch, to_inject, Arity.EXACTLY_ONE) #todo add target to this exception
+            guard(NonePrimaryImplementationException, target, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0]
@@ -171,11 +147,11 @@ class OptionalDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return [ details.primary ] if details.primary else []
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
             guard(DependencyArityMismatch, to_inject, Arity.ZERO_OR_ONE)
             if to_inject:
-                guard(NonePrimaryImplementationException, to_inject)
+                guard(NonePrimaryImplementationException, target, to_inject)
 
     def as_injected_value(self, values_to_inject: list) -> Any:
         return values_to_inject[0] if values_to_inject else None
@@ -184,14 +160,14 @@ class OptionalDependency(KindDefinition):
         return _nonthrowing_isinstance(None, t) # "type is optional" aka "None can be an instance of this type"
 
     def unpack_hint(self, t: type) -> type:
-        return _guard_len_equals(flatten_types(t), 1)[0]
+        return WrongIterableSizeException.guard(flatten_types(t), 1)[0]
 
 
 class CollectiveDependency(KindDefinition):
     def choose_injected_types(self, details: ImplementationDetails) -> Any:
         return list(details.implementations)
 
-    def validate_injected_types(self, to_inject: list[ConcreteType]):
+    def validate_injected_types(self, target: type, to_inject: list[ConcreteType]):
         with Group() as guard:
             guard(DependencyArityMismatch, to_inject, Arity.ANY_NUMBER)
         #todo check args not none
@@ -204,7 +180,7 @@ class CollectiveDependency(KindDefinition):
         return isinstance(t, GenericAlias) and t.__origin__ == list
 
     def unpack_hint(self, t: type) -> type:
-        return _guard_len_equals(flatten_types(*t.__args__), 1)[0]
+        return WrongIterableSizeException.guard(flatten_types(*t.__args__), 1)[0]
 
 
 class DependencyKind(Enum):
@@ -246,9 +222,10 @@ def get_any_function_dependencies[**P, R](callable: Callable[P, R], *, skip_firs
     :raise InvalidInjectionPointException:
     """
     spec = getfullargspec(callable)
-    #todo rethink these constraints
-    # assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
-    # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
+    #todo warning in these cases - nothing bad will happen if inject_requirements has varargs and friends, but they
+    # will always have empty values
+    # assert spec.varargs is None, "Inject method cannot have varargs (*args)"
+    # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)"
     if spec.kwonlyargs:
         if spec.kwonlydefaults is None:
             raise NoDefaultForKwOnlyArgException(spec.kwonlyargs)

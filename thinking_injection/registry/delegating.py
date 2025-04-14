@@ -90,11 +90,11 @@ class TypeIndexUnion(TypeIndex):
         for i in self.indexes:
             yield from i.order(cyclic_resolver)
 
-    def graph(self, name: str = "index", edges: set[GraphEdge] = None) -> Dot:
+    def graph(self, name: str = "index", edges: set[GraphEdge] = None, colors: dict[str, str]=None) -> Dot:
         result = Dot(graph_name=name, suppress_disconnected=True)
         for i, sub in enumerate(self.indexes):
             name = self.names[i] if i < len(self.names) else f"subindex{i}"
-            index_graph = sub.graph(edges=edges)
+            index_graph = sub.graph(edges=edges, colors=colors)
             subgraph = Cluster(graph_name=name, suppress_disconnected=True, label=name, style="dotted")
             for n in index_graph.get_nodes():
                 subgraph.add_node(n)

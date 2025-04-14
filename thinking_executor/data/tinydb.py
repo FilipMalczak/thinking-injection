@@ -5,12 +5,25 @@ from os.path import exists, dirname, abspath
 from thinking_runtime.defaults.recognise_runtime import current_runtime, RuntimeMode
 from tinydb import TinyDB
 
+from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
 from thinking_executor.data.tiny_model import TinyConfiguration, TinyDBTable, TinyDBParameters
 from thinking_executor.data.tiny_schema import TinyDBWithSchema, TinyDBTableWithSchema
 from thinking_injection.injectable import Injectable
 from thinking_reflection.discovery import discover
 
 log = getLogger(__name__)
+
+@discover
+class CommonTinyDBConfiguration(Injectable, TinyConfiguration):
+    def __init__(self):
+        self.dir_provider: ProjectPersistenceDirectoryProvider = None
+
+    def inject_requirements(self, dir_provider: ProjectPersistenceDirectoryProvider) -> None:
+        self.dir_provider = dir_provider
+
+    def get_tinydb_parameters(self) -> TinyDBParameters:
+        return TinyDBParameters(f"{self.dir_provider.project_data_dir()}/tinydb.json")
+
 
 @discover
 class TinyDBLifecycle(Injectable):
@@ -44,11 +57,3 @@ class TinyDBLifecycle(Injectable):
 
     def get_table_of(self, t: type) -> TinyDBTableWithSchema:
         return self.db_with_schema.table_of(t)
-
-if current_runtime().mode == RuntimeMode.TEST:
-    from thinking_tests.current import current_case_id
-
-    @discover
-    class TinyDBTestConfiguration(TinyConfiguration):
-        def get_tinydb_parameters(self) -> TinyDBParameters:
-            return TinyDBParameters(f"./test-data/{current_case_id()}.json")

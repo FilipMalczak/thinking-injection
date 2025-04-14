@@ -49,6 +49,13 @@ class RuntimeSession(SerializableMixin):
     metadata: RuntimeSessionMetadata
     context_sessions: dict[int, ContextSession]
 
+    def last_context_session(self) -> ContextSession | None:
+        if not self.context_sessions:
+            return None
+        max_idx = max(self.context_sessions.keys())
+        last = self.context_sessions[max_idx]
+        return last
+
 @dataclass
 class ContextSessionPointer(SerializableMixin):
     runtime_sid: SessionId

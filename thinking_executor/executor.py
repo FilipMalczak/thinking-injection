@@ -34,13 +34,11 @@ class ExecutionFrame(StrReprMixin):
     next_subtask_order: list[int]
     task_type: TaskType
 
-@interface
-class TaskExecutor:
-
-    #just for type hints
+class CoreExecutor:
     def execute(self, task_key: TaskKey, task_body: Callable, task_type: TaskType, task_args: Args = None): pass
 
-class FluentExecutorMixin(TaskExecutor):
+
+class FluentExecutorMixin(CoreExecutor):
 
     def execute_step(self, step_key: TaskKey, step_body: Callable, step_args: Args = None):
         self.execute(step_key, step_body, TaskType.STEP, step_args)
@@ -74,9 +72,22 @@ class ExecutorDecoratorsMixin(FluentExecutorMixin):
 
         return decorator
 
+
+@interface
+class TaskExecutor(ExecutorDecoratorsMixin): ...
+
+# DO NOT DISCOVER THIS! allow the executor to add this callback instead; it will avoid doing that if you purposefully
+#  register subclass of this callback, but if you're not doing some magic, let the framework handle this for you
+class StepTrackingCallback(StepExecutorCallback):
+    def __init__(self, session_manager: PersistentSessionManager):
+        self.session_manager = session_manager
+
+    def on_step_invoked(self, start: datetime, coordinates: TaskCoordinates):
+        self.session_manager.mark_invoked_step(coordinates)
+
 @discover
 @PrimaryImplementation(TaskExecutor)
-class SimpleTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
+class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
     def __init__(self):
         self.table: TinyDBTableWithSchema = None
         self.stack: list[ExecutionFrame] = None
@@ -87,6 +98,8 @@ class SimpleTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
     def inject_requirements(self, session_manager: PersistentSessionManager, callbacks: list[StepExecutorCallback], tiny: TinyDBLifecycle):
         self.session_manager = session_manager
         self.callbacks.add_delegate(*callbacks)
+        if not any(isinstance(c, StepTrackingCallback) for c in self.callbacks.delegates):
+            self.add_callback(StepTrackingCallback(self.session_manager))
         self.table = tiny.get_table_of(TaskExecutionRecord)
 
     def add_callback(self, *callbacks: StepExecutorCallback):
@@ -148,7 +161,7 @@ class SimpleTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
 
         outcome = outcome_of(e)
 
-        log.info(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
+        log.error(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
         self.callbacks.on_task_finished(start, finish, coordinates, outcome)
         if not isinstance(e, ToBeContinuedException) or len(coordinates) > 1:
             return True
@@ -172,30 +185,38 @@ class SimpleTaskExecutor(Injectable, ExecutorDecoratorsMixin, StrReprMixin):
         self.callbacks.on_task_submitted(coordinates)
         exec_log = self._find_execution_log(coordinates)
 
-        if exec_log is not None:
+        if exec_log is not None and task_type == TaskType.STEP:
             log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
             log.debug(f"Detailed execution log: {exec_log}")
             self.stack[-1].next_subtask_order[-1] += 1
             # self.consistency_manager.skip(coordinates) #fixme
             self.callbacks.on_task_skipped(exec_log)
         else:
+            #todo currently only the first execution log for stages is stored; maybe mark each stage run instead?
             args = task_args or Args()
-            log.info(f"Task {coordinates} hasn't been executed yet")
+            if exec_log is None:
+                log.info(f"Task {coordinates} hasn't been executed yet")
+            else:
+                log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
+                log.info(f"Rerunning {coordinates} nontheless, as it is a stage")
+                log.debug(f"Detailed execution log: {exec_log}")
             log.debug(f"Task arguments: {args}")
             try:
-                # with self.consistency_manager.invoke(coordinates): #fixme
-                    self.stack.append(ExecutionFrame(step_path, step_order + [0], task_type))
-                    start = datetime.now()
-                    log.debug("Executing task body")
-                    self.callbacks.on_task_invoked(start, coordinates)
-                    args.invoke(task_body)
-                    finish = datetime.now()
-                    log.info(f"Task finished executing at {finish}")
+                self.stack.append(ExecutionFrame(step_path, step_order + [0], task_type))
+                start = datetime.now()
+                log.debug("Executing task body")
+                self.callbacks.on_task_invoked(start, coordinates)
+                args.invoke(task_body)
+                finish = datetime.now()
+                log.info(f"Task finished executing at {finish}")
+                if exec_log is not None:
+                    log.debug("Task already marked as finished")
+                else:
                     exec_log = self._mark_finished(coordinates, start, finish)
                     log.debug("Task marked as finished")
                     log.debug(f"Detailed execution log: {exec_log}")
 
-                    self.callbacks.on_task_finished(start, finish, coordinates, Success())
+                self.callbacks.on_task_finished(start, finish, coordinates, Success())
             except Exception as e:
                 if self._exception_handler(e, start, coordinates):
                     raise

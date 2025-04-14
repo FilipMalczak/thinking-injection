@@ -36,15 +36,19 @@ class PersistentSessionManager(Injectable, StrReprMixin):
             self.previous_runtime_session = self._table.get(Query().sid == str(prev_session.sid))
         self.globals.save(LastSession(RUNTIME_SESSION.sid))
         if prev_session.sid != RUNTIME_SESSION.sid:
-            self.callbacks.on_new_runtime_session(RUNTIME_SESSION, self.previous_runtime_session)
+            changed = self.callbacks.on_new_runtime_session(RUNTIME_SESSION, self.previous_runtime_session)
+            if changed:
+                self._persist()
+                self._persist(self.previous_runtime_session)
         self._open_context_session()
 
     def deinitialize(self, exc: BaseException | None) -> None:
         self._close_context_session(exc is None)
 
 
-    def _persist(self):
-        self._table.upsert(self.runtime_session, Query().sid == str(self.runtime_session.sid))
+    def _persist(self, runtime_session: RuntimeSession = None):
+        runtime_session = runtime_session or self.runtime_session
+        self._table.upsert(runtime_session, Query().sid == str(runtime_session.sid))
 
     #todo dedicated exceptions
     def _open_context_session(self):
@@ -54,7 +58,9 @@ class PersistentSessionManager(Injectable, StrReprMixin):
         RUNTIME_SESSION.context_sessions[session_no] = self.current_context_session
         self._persist()
         self.current_session_pointer = ContextSessionPointer(RUNTIME_SESSION.sid, self.current_context_session.session_no)
-        self.callbacks.before_context_session(self.current_session_pointer, self.current_context_session)
+        changed = self.callbacks.before_context_session(self.current_session_pointer, self.current_context_session)
+        if changed:
+            self._persist()
 
 #todo this is unused; probably leftover from previous repo that entangled database versioning with the executor; fix it and update the `clustering` example DB
     def mark_invoked_step(self, coordinates: TaskCoordinates):
@@ -70,5 +76,7 @@ class PersistentSessionManager(Injectable, StrReprMixin):
         pointer = self.current_session_pointer
         self.current_session_pointer = None
         self._persist()
-        self.callbacks.after_context_session(pointer, session)
+        changed = self.callbacks.after_context_session(pointer, session)
+        if changed:
+            self._persist()
 
