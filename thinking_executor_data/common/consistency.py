@@ -27,12 +27,15 @@ class ConsistentDataVersioningCallback(Injectable, StepExecutorCallback, Session
         self.versioning = versioning
         self.writability = writability
 
-    def on_new_runtime_session(self, new_session: RuntimeSession, previous_session: RuntimeSession | None):
+    def on_new_runtime_session(self, new_session: RuntimeSession, previous_session: RuntimeSession | None) -> bool:
         #the assumption is that all but last context sessions went through deinitialization; this is supposed
         # to check for cases of power outage, forceful system shutdown, straight-on killing the process, etc
         # so only the last context session may be dirty
         if previous_session is not None and not previous_session.last_context_session().sanitized:
             self.versioning.rollback()
+            previous_session.last_context_session().sanitized = True
+            return True
+        return False
 
     def on_step_skipped(self, exec_log: TaskExecutionRecord):
         self.versioning.checkout(exec_log.coordinates)

@@ -1,0 +1,86 @@
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @139 :: Lifecycle ordering:
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 0: <class 'kmeans.dataset.DatasetLoader'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 1: <class 'kmeans.distance.Distance'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 2: <class 'abc.InstanceIndexLoopback'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 3: <class 'thinking_injection.invoker.contextful.ContextfulInvoker'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 4: <class 'kmeans.data.TinyDbConfig'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 5: <class 'thinking_executor.data.tinydb.TinyDBLifecycle'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 6: <class 'thinking_executor.globals_manager.GlobalsManager'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 7: <class 'thinking_executor.session.PersistentSessionManager'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 8: <class 'thinking_executor.executor.SimpleTaskExecutor'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 9: <class 'kmeans.vectors.Vectors'>
+[  INFO  ] 2025-04-14 13:51:00,773 | thinking_injection.context.simple @141 :: 10: <class 'kmeans.clusterizer.Clusterizer'>
+[  INFO  ] 2025-04-14 13:51:00,774 | thinking_injection.lifecycle @30 :: Initializing <thinking_injection.invoker.contextful.ContextfulInvoker object at 0x7c4b84d59e20>
+[  INFO  ] 2025-04-14 13:51:00,774 | thinking_injection.lifecycle @30 :: Initializing <thinking_executor.data.tinydb.TinyDBLifecycle object at 0x7c4b843d0fb0>
+[  INFO  ] 2025-04-14 13:51:00,774 | thinking_injection.lifecycle @30 :: Initializing GlobalsManager()
+[  INFO  ] 2025-04-14 13:51:00,803 | thinking_injection.lifecycle @30 :: Initializing PersistentSessionManager()
+[  INFO  ] 2025-04-14 13:51:00,846 | thinking_injection.lifecycle @30 :: Initializing SimpleTaskExecutor()
+[  INFO  ] 2025-04-14 13:51:00,897 | thinking_injection.lifecycle @30 :: Initializing <kmeans.clusterizer.Clusterizer object at 0x7c4b8417c290>
+[  INFO  ] 2025-04-14 13:51:00,901 | thinking_executor.executor @198 :: Task STAGE:kmeans@0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:00,905 | thinking_executor.executor @189 :: Task STEP:kmeans/intialize_centroids@0/0 has already been executed on 2025-04-14 13:49:56.358554 (finished on 2025-04-14 13:49:56.365711)
+[  INFO  ] 2025-04-14 13:51:00,909 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations@0/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:00,913 | thinking_executor.executor @200 :: Task STAGE:kmeans/iterations/0@0/1/0 has already been executed on 2025-04-14 13:49:56.370219 (finished on 2025-04-14 13:49:57.485427)
+[  INFO  ] 2025-04-14 13:51:00,913 | thinking_executor.executor @201 :: Rerunning STAGE:kmeans/iterations/0@0/1/0 nontheless, as it is a stage
+[  INFO  ] 2025-04-14 13:51:00,924 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/0/assign@0/1/0/0 has already been executed on 2025-04-14 13:49:56.371286 (finished on 2025-04-14 13:49:57.439117)
+[  INFO  ] 2025-04-14 13:51:00,928 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/0/recalculate@0/1/0/1 has already been executed on 2025-04-14 13:49:57.446226 (finished on 2025-04-14 13:49:57.479189)
+[  INFO  ] 2025-04-14 13:51:00,928 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:00.928331
+[  INFO  ] 2025-04-14 13:51:00,932 | thinking_executor.executor @200 :: Task STAGE:kmeans/iterations/1@0/1/1 has already been executed on 2025-04-14 13:49:57.499860 (finished on 2025-04-14 13:49:58.601151)
+[  INFO  ] 2025-04-14 13:51:00,932 | thinking_executor.executor @201 :: Rerunning STAGE:kmeans/iterations/1@0/1/1 nontheless, as it is a stage
+[  INFO  ] 2025-04-14 13:51:00,942 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/1/assign@0/1/1/0 has already been executed on 2025-04-14 13:49:57.506633 (finished on 2025-04-14 13:49:58.541775)
+[  INFO  ] 2025-04-14 13:51:00,946 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/1/recalculate@0/1/1/1 has already been executed on 2025-04-14 13:49:58.552972 (finished on 2025-04-14 13:49:58.592720)
+[  INFO  ] 2025-04-14 13:51:00,946 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:00.946640
+[  INFO  ] 2025-04-14 13:51:00,950 | thinking_executor.executor @200 :: Task STAGE:kmeans/iterations/2@0/1/2 has already been executed on 2025-04-14 13:49:58.611865 (finished on 2025-04-14 13:49:59.757787)
+[  INFO  ] 2025-04-14 13:51:00,950 | thinking_executor.executor @201 :: Rerunning STAGE:kmeans/iterations/2@0/1/2 nontheless, as it is a stage
+[  INFO  ] 2025-04-14 13:51:00,961 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/2/assign@0/1/2/0 has already been executed on 2025-04-14 13:49:58.618650 (finished on 2025-04-14 13:49:59.669810)
+[  INFO  ] 2025-04-14 13:51:00,964 | thinking_executor.executor @189 :: Task STEP:kmeans/iterations/2/recalculate@0/1/2/1 has already been executed on 2025-04-14 13:49:59.684699 (finished on 2025-04-14 13:49:59.746173)
+[  INFO  ] 2025-04-14 13:51:00,965 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:00.965071
+[  INFO  ] 2025-04-14 13:51:00,968 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/3@0/1/3 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:00,979 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/3/assign@0/1/3/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:02,059 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:02.059471
+[  INFO  ] 2025-04-14 13:51:02,083 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/3/recalculate@0/1/3/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:02,142 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:02.142356
+[  INFO  ] 2025-04-14 13:51:02,156 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:02.156251
+[  INFO  ] 2025-04-14 13:51:02,174 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/4@0/1/4 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:02,190 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/4/assign@0/1/4/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:03,268 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:03.268021
+[  INFO  ] 2025-04-14 13:51:03,290 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/4/recalculate@0/1/4/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:03,353 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:03.353740
+[  INFO  ] 2025-04-14 13:51:03,370 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:03.370514
+[  INFO  ] 2025-04-14 13:51:03,405 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/5@0/1/5 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:03,422 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/5/assign@0/1/5/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:04,517 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:04.517427
+[  INFO  ] 2025-04-14 13:51:04,543 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/5/recalculate@0/1/5/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:04,612 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:04.612493
+[  INFO  ] 2025-04-14 13:51:04,631 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:04.631055
+[  INFO  ] 2025-04-14 13:51:04,665 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/6@0/1/6 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:04,690 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/6/assign@0/1/6/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:05,780 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:05.780053
+[  INFO  ] 2025-04-14 13:51:05,821 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/6/recalculate@0/1/6/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:05,896 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:05.896647
+[  INFO  ] 2025-04-14 13:51:05,919 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:05.919179
+[  INFO  ] 2025-04-14 13:51:05,950 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/7@0/1/7 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:05,973 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/7/assign@0/1/7/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:07,073 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:07.073695
+[  INFO  ] 2025-04-14 13:51:07,121 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/7/recalculate@0/1/7/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:07,203 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:07.203750
+[  INFO  ] 2025-04-14 13:51:07,228 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:07.228322
+[  INFO  ] 2025-04-14 13:51:07,260 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/8@0/1/8 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:07,286 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/8/assign@0/1/8/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:08,387 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:08.387818
+[  INFO  ] 2025-04-14 13:51:08,434 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/8/recalculate@0/1/8/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:08,535 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:08.535775
+[  INFO  ] 2025-04-14 13:51:08,575 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:08.575204
+[  INFO  ] 2025-04-14 13:51:08,611 | thinking_executor.executor @198 :: Task STAGE:kmeans/iterations/9@0/1/9 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:08,641 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/9/assign@0/1/9/0 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:09,746 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:09.746080
+[  INFO  ] 2025-04-14 13:51:09,797 | thinking_executor.executor @198 :: Task STEP:kmeans/iterations/9/recalculate@0/1/9/1 hasn't been executed yet
+[  INFO  ] 2025-04-14 13:51:09,891 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:09.891729
+[  INFO  ] 2025-04-14 13:51:09,920 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:09.920911
+[  INFO  ] 2025-04-14 13:51:09,951 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:09.951276
+[  INFO  ] 2025-04-14 13:51:09,993 | thinking_executor.executor @211 :: Task finished executing at 2025-04-14 13:51:09.993607
+[  INFO  ] 2025-04-14 13:51:10,044 | thinking_injection.lifecycle @38 :: Deinitializing <kmeans.clusterizer.Clusterizer object at 0x7c4b8417c290>
+[  INFO  ] 2025-04-14 13:51:10,044 | thinking_injection.lifecycle @38 :: Deinitializing SimpleTaskExecutor()
+[  INFO  ] 2025-04-14 13:51:10,044 | thinking_injection.lifecycle @38 :: Deinitializing PersistentSessionManager()
+[  INFO  ] 2025-04-14 13:51:10,074 | thinking_injection.lifecycle @38 :: Deinitializing GlobalsManager()
+[  INFO  ] 2025-04-14 13:51:10,074 | thinking_injection.lifecycle @38 :: Deinitializing <thinking_executor.data.tinydb.TinyDBLifecycle object at 0x7c4b843d0fb0>
+[  INFO  ] 2025-04-14 13:51:10,074 | thinking_injection.lifecycle @38 :: Deinitializing <thinking_injection.invoker.contextful.ContextfulInvoker object at 0x7c4b84d59e20>

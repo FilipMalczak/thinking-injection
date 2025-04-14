@@ -76,6 +76,15 @@ class ExecutorDecoratorsMixin(FluentExecutorMixin):
 @interface
 class TaskExecutor(ExecutorDecoratorsMixin): ...
 
+# DO NOT DISCOVER THIS! allow the executor to add this callback instead; it will avoid doing that if you purposefully
+#  register subclass of this callback, but if you're not doing some magic, let the framework handle this for you
+class StepTrackingCallback(StepExecutorCallback):
+    def __init__(self, session_manager: PersistentSessionManager):
+        self.session_manager = session_manager
+
+    def on_step_invoked(self, start: datetime, coordinates: TaskCoordinates):
+        self.session_manager.mark_invoked_step(coordinates)
+
 @discover
 @PrimaryImplementation(TaskExecutor)
 class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
@@ -89,6 +98,8 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
     def inject_requirements(self, session_manager: PersistentSessionManager, callbacks: list[StepExecutorCallback], tiny: TinyDBLifecycle):
         self.session_manager = session_manager
         self.callbacks.add_delegate(*callbacks)
+        if not any(isinstance(c, StepTrackingCallback) for c in self.callbacks.delegates):
+            self.add_callback(StepTrackingCallback(self.session_manager))
         self.table = tiny.get_table_of(TaskExecutionRecord)
 
     def add_callback(self, *callbacks: StepExecutorCallback):

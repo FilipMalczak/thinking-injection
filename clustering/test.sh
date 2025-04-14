@@ -28,4 +28,4 @@ if [[ $SECOND_DURATION -gt $FIRST_DURATION ]]; then
   echo "Second run was longer than the first!"
   exit 1
 fi
-echo "Second run was shorter than the first, everythin checks out"
+echo "Second run was shorter than the first, everything checks out"
