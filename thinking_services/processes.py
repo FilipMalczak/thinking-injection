@@ -24,11 +24,11 @@ class Program(NamedTuple):
         consumer = log_consumer or self.log_consumer
         if consumer:
             kwargs.update(dict(
-            stdout=PIPE,
-            stderr=STDOUT,
-            text=True,
-            encoding="utf-8"
-        ))
+                stdout=PIPE,
+                stderr=STDOUT,
+                text=True,
+                encoding="utf-8"
+            ))
         log.debug(f"Running: {full_cmd}")
         result = spawn(full_cmd, **kwargs)
         if consumer:

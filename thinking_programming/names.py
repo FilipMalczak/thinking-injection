@@ -1,6 +1,8 @@
 import uuid
 from typing import overload, NamedTuple
 
+#fixme this module is untested, though it's not rocket science and there's not much to test here anyway
+
 META_NAMESPACE_UUID = uuid.UUID('42afa334-865e-4a0f-b169-ce17a5acfe10')
 """
 This is UUID that is used as namespace to generate UUID5 for "Namespace", thus "meta" prefix.

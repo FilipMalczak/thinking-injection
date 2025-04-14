@@ -114,7 +114,6 @@ def just_create():
         def top_level():
             @traced
             def a_step():
-                #todo save(one) -> one; save(many) -> many; maybe save_all(many) -> many?
                 nonlocal e
                 assert_repo_is_empty(repo)
                 assert_cannot_be_found(repo, q)
@@ -270,6 +269,6 @@ def branches_are_correct():
         expect_coordinates(versioning, ["top", "third"], [0, 2], TaskType.STEP)
 
 if __name__=="__main__":
-    # run_current_module()
-    just_create()
+    run_current_module()
+    # just_create()
     # create_two_then_delete()

@@ -39,9 +39,10 @@ class SqlAlchemyEngineLifecycle(Injectable):
         self._session = Session(self._engine)
 
     def deinitialize(self, exc: BaseException | None) -> None:
-        #todo make the latter happen even if session.close raises
-        self._session.close()
-        self._engine.dispose(True)
+        try:
+            self._session.close()
+        finally:
+            self._engine.dispose(True)
 
     @property
     def engine(self) -> Engine:

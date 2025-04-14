@@ -108,11 +108,10 @@ def just_create():
         repo = idx.instance(DoltStorage).repository(DumbEntity)
         def top_level():
             def a_step():
-                #todo save(one) -> one; save(many) -> many; maybe save_all(many) -> many?
                 nonlocal e
                 assert_repo_is_empty(repo)
                 assert_cannot_be_found(repo, DumbEntity.txt == current_case_name())
-                e = list(repo.save(DumbEntity(txt=current_case_name())))[0]
+                e = repo.save_one(DumbEntity(txt=current_case_name()))
                 assert_repo_size_is(repo, 1)
                 assert_exists(repo, e.id_)
                 assert_can_be_found(repo, DumbEntity.txt == current_case_name())

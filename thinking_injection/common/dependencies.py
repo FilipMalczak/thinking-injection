@@ -40,15 +40,6 @@ class Arity(Enum):
 
 
 
-def Guard_len_equals(types: Iterable[type], l: int) -> list[type]:
-    """
-    :raise WrongIterableSizeException:
-    """
-    out = list(types)
-    WrongIterableSizeException.guard(out, l)
-    return out
-
-
 def _nonthrowing_isinstance(*args) -> bool:
     try:
         return isinstance(*args)
@@ -169,7 +160,7 @@ class OptionalDependency(KindDefinition):
         return _nonthrowing_isinstance(None, t) # "type is optional" aka "None can be an instance of this type"
 
     def unpack_hint(self, t: type) -> type:
-        return Guard_len_equals(flatten_types(t), 1)[0]
+        return WrongIterableSizeException.guard(flatten_types(t), 1)[0]
 
 
 class CollectiveDependency(KindDefinition):
@@ -189,7 +180,7 @@ class CollectiveDependency(KindDefinition):
         return isinstance(t, GenericAlias) and t.__origin__ == list
 
     def unpack_hint(self, t: type) -> type:
-        return Guard_len_equals(flatten_types(*t.__args__), 1)[0]
+        return WrongIterableSizeException.guard(flatten_types(*t.__args__), 1)[0]
 
 
 class DependencyKind(Enum):
@@ -231,9 +222,10 @@ def get_any_function_dependencies[**P, R](callable: Callable[P, R], *, skip_firs
     :raise InvalidInjectionPointException:
     """
     spec = getfullargspec(callable)
-    #todo rethink these constraints
-    # assert spec.varargs is None, "Inject method cannot have varargs (*args)" #todo better msg
-    # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)" #todo better msg
+    #todo warning in these cases - nothing bad will happen if inject_requirements has varargs and friends, but they
+    # will always have empty values
+    # assert spec.varargs is None, "Inject method cannot have varargs (*args)"
+    # assert spec.varkw is None, "Inject method cannot have keyword args (**kwargs)"
     if spec.kwonlyargs:
         if spec.kwonlydefaults is None:
             raise NoDefaultForKwOnlyArgException(spec.kwonlyargs)

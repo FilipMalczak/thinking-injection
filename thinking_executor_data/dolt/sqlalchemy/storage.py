@@ -19,16 +19,20 @@ from thinking_executor_data.common.writability import WritabilityManager
 from thinking_executor_data.dolt.sqlalchemy.base import SqlAlchemyEntity
 from thinking_programming.tracing import traced
 
+#if this is simply `SQLFilter = ColumnExpressionArgument` (w/o `type` keyword)
+# then there are failures when declaring generic types referring to SQLFilter
+# that seems to be because w/o `type` keyword, this is simply an alias for forward-referencing union
+# which then leaves an unresolved _T type in generic parameters set
+#
+# it's hard to explain properly; just remove the `type` and weep
 type SQLFilter = ColumnExpressionArgument
 
-logged = traced
-
+#I'm not sure if that's the best of ideas, but it will work as "auto-create DDL whenever needed"; todo: rethink this
 def create_schema_if_needed(repo):
     def decorator(foo):
         @wraps(foo)
         def wrapper(*args, **kwargs):
             def _on_missing_table():
-                # Base.metadata
                 SqlAlchemyEntity.metadata.create_all(repo.session.bind)
                 repo.versioning.commit("DDL")
                 return foo(*args, **kwargs)
@@ -41,8 +45,6 @@ def create_schema_if_needed(repo):
             except SqlAlchemyProgrammingError as e:
                 if e.orig.args[0] == ER.NO_SUCH_TABLE:
                     return _on_missing_table()
-                raise
-
                 raise
         return wrapper
     return decorator
@@ -82,8 +84,8 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
     def metadata(self) -> RepositoryMetadata[type[E], ID, SQLFilter]:
         return RepositoryMetadata(self.entity_type, self._id_type(), SQLFilter)
 
-    @logged
     def save(self, *entities: Collectable[E]) -> list[E]:
+        #w/o this local function, we couldn't pass self to the decorator
         @create_schema_if_needed(self)
         def _impl():
             self.writability.require_writing("dolt")
@@ -95,51 +97,41 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
         return _impl()
 
     #todo ordering, paging
-    @logged
     def find(self) -> Find[ID, SQLFilter, E]:
         class DoltFind(Find[ID, SQLFilter, E]):
             @create_schema_if_needed(self)
-            @logged
             def by_id(find, _id: ID) -> E | None:
                 #todo assert no more than one result?
                 return self._do_query(self._id_is(_id)).first()
 
             @create_schema_if_needed(self)
-            @logged
             def by_ids(find, *ids: Collectable[ID]) -> Iterable[E]:
                 return self._do_query(self._id_in( *ids)).all()
 
             @create_schema_if_needed(self)
-            @logged
             def where(find, query: SQLFilter) -> Iterable[E]:
                 return self._do_query(query).all()
 
             @create_schema_if_needed(self)
-            @logged
             def all(find) -> Iterable[E]:
                 return self._do_query().all()
         return DoltFind()
 
-    @logged
     def count(self) -> Count[ID, SQLFilter]:
         class DoltCount(Count[ID, SQLFilter]):
             @create_schema_if_needed(self)
-            @logged
             def by_ids(count, *ids: Collectable[ID]) -> int:
                 return count.where(self._id_in(*ids))
 
             @create_schema_if_needed(self)
-            @logged
             def where(count, query: SQLFilter) -> int:
                 return self._do_query(query).count()
 
             @create_schema_if_needed(self)
-            @logged
             def all(count) -> int:
                 return self._do_query().count()
         return DoltCount()
 
-    @logged
     def exist(self) -> Exist[ID, SQLFilter]:
         def _exists_query(condition):
             q = self._do_query(condition)
@@ -152,52 +144,42 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
                 byids.ids = ids
 
             @create_schema_if_needed(self)
-            @logged
             def all(byids) -> bool:
                 return self._do_query(self._id_in(byids.ids)).count() == len(byids.ids)
 
             @create_schema_if_needed(self)
-            @logged
             def any(byids) -> bool:
                 return _exists_query(self._id_in(byids.ids))
 
         class DoltExist(Exist[ID, SQLFilter]):
             @create_schema_if_needed(self)
-            @logged
             def by_id(exist, _id: ID) -> bool:
                 return _exists_query(self._id_is(_id))
 
             @create_schema_if_needed(self)
-            @logged
             def by_ids(exist, *ids: Collectable[ID]) -> DoltExistByIds:
                 return DoltExistByIds(list(collect(self._id_type(), *ids)))
 
             @create_schema_if_needed(self)
-            @logged
             def where(exist, query: SQLFilter) -> bool:
                 return _exists_query(query)
         return DoltExist()
 
-    @logged
     def delete(self) -> Delete[ID, SQLFilter]:
         class DoltDelete(Delete[ID, SQLFilter]):
             @create_schema_if_needed(self)
-            @logged
             def by_id(exist, _id: ID):
                 self._do_query(self._id_is(_id)).delete()
 
             @create_schema_if_needed(self)
-            @logged
             def by_ids(count, *ids: Collectable[ID]):
                 self._do_query(self._id_in(*ids)).delete()
 
             @create_schema_if_needed(self)
-            @logged
             def where(count, query: SQLFilter):
                 self._do_query(query).delete()
 
             @create_schema_if_needed(self)
-            @logged
             def all(self):
                 #todo I expect there to be session.delete_all or smth; check if it can be done better
                 self._do_query().delete()

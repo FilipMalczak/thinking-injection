@@ -33,7 +33,6 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def current_branch(self) -> str:
         result = self.session.execute(text("SELECT active_branch();")).scalar()
-        log.debug("Current branch is "+result)
         return result
 
     def current_coordinates(self) -> TaskCoordinates:
@@ -45,9 +44,7 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def has_branch(self, coordinates: TaskCoordinates) -> bool:
         name = self.name_adapter().to_branch_name(coordinates)
-        log.debug("Looking for branch "+name+" (coordinates: "+str(coordinates)+")")
         found = self.session.execute(text(f"SELECT count(*) FROM dolt_branches WHERE name = '{name}'")).scalar() > 0
-        log.debug("Found branch "+name+": "+str(found))
         return found
 
     def new_branch(self, coordinates: TaskCoordinates):
@@ -61,7 +58,6 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
     def checkout(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
         self._call_procedure("DOLT_CHECKOUT", name)
-        log.debug(f"Post-checkout branch is {self.current_branch()}")
 
     def commit(self, comment: str = None):
         # DO NOT DO

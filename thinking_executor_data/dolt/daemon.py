@@ -181,7 +181,6 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
         try:
             log.debug(f"Trying to connect via PyMySQL to {self.connection_config.mysql_connection_str}")
             c = pymysql.connect(
-                # host=self.daemon_config.host,
                 host="localhost",
                 port=self.daemon_config.port,
                 user=self.daemon_config.user_config.sql_credentials.username,
@@ -199,7 +198,7 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
 
     def _healthcheck(self):
         poll(NamedPredicate("dolt sql -q ...", self._dolt_sql_check), 5, ConstantStepback(1))
-        #retries number is higher for pymysql check - that's mostly for testing sake
+        #retries number is higher for pymysql check - that's mostly for CI sake, where the resources may be more scarce
         poll(NamedPredicate("pymysql connect", self._pymysql_check), 10, ConstantStepback(1))
 
     def create_dolt_connection_config(self) -> DoltConectionConfig:

@@ -25,6 +25,7 @@ class WrongIterableSizeException(ValueError):
     def guard(cls, i: Iterable, e: int):
         if len(i) != e:
             raise cls(i, e)
+        return i
 
 
 class EmptyIterableException(WrongIterableSizeException):

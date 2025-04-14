@@ -145,11 +145,6 @@ class SimpleInstanceIndex(InstanceIndex):
                 self._lifecycles[t] = lifecycle
             with composite_lifecycle(lifecycles):
                 yield
-        # except:
-        #     log.error("Error during context lifecycle!")
-        #     log.error("DOT graph for the current context:")
-        #     log.error(self.index.graph().to_string())
-        #     raise
         finally:
             self._lifecycles.clear()
 
