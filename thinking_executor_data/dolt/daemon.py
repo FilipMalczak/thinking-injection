@@ -10,8 +10,8 @@ from pymysql import DatabaseError
 from thinking_runtime.defaults.recognise_runtime import current_runtime, RuntimeMode
 
 from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
-from thinking_executor_data.terminus.server import Credentials
 from thinking_injection.injectable import Injectable
+from thinking_programming.credentials import Credentials
 from thinking_reflection.discovery import discover
 from thinking_reflection.interfaces import interface
 from thinking_services.polling import poll, NamedPredicate, ConstantStepback

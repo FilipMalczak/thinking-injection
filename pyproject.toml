@@ -30,8 +30,7 @@ dependencies = [
     "docker==7.1.0",
     "setuptools==75.8.0", # needed by docker-py on p3.12+
     "sqlalchemy==2.0.40",
-    "pymysql==1.1.1",
-    "terminusdb-client==10.2.4"
+    "pymysql==1.1.1"
 ]
 requires-python = ">=3.12"
 
