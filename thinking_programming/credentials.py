@@ -21,9 +21,3 @@ class Credentials(NamedTuple):
         out += self.password[-1]
         return out
 
-#todo extract tests
-assert str(Credentials(None, None)) == "Credentials(username=None, password=None)"
-assert str(Credentials("x", None)) == "Credentials(username='x', password=None)"
-assert str(Credentials("x", "y")) == "Credentials(username='x', password='*')"
-assert str(Credentials("x", "yy")) == "Credentials(username='x', password='**')"
-assert str(Credentials("x", "abc")) == "Credentials(username='x', password='a*c')"
