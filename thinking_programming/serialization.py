@@ -143,7 +143,7 @@ def serialize(o: Serializable) -> Representation:
     assert False, f"Cannot serialize {o} of type {type(o)}"
 
 
-def deserialize[T](o: Serializable, t: type[T]) -> T:
+def deserialize[T](o: Representation, t: type[T]) -> T:
     if o is None or (not isinstance(t, GenericAlias) and isinstance(o, t)):
         return o
     if isinstance(o, list):
