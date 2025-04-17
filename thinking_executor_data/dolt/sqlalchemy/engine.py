@@ -27,14 +27,15 @@ class SqlAlchemyEngineLifecycle(Injectable):
         db_connection = self._connection_config.mysql_connection_str
         log.info(f"Creating engine for workload: {db_connection}")
         self._engine = create_engine(
-            db_connection,
+            db_connection
             #todo make these ("echo") configurable
             # echo=True,
             # echo_pool=True,
-            pool_pre_ping=True,
-            connect_args={
-                "connect_timeout": 10  # in seconds
-            }
+            #todo these too
+            # pool_pre_ping=True,
+            # connect_args={
+            #     "connect_timeout": 10  # in seconds
+            # }
         )
         self._session = Session(self._engine)
 

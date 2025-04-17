@@ -1,11 +1,14 @@
+import traceback
+from dataclasses import dataclass
 from functools import wraps
-from typing import Iterable
-
+from logging import getLogger
+from typing import Iterable, NamedTuple, Protocol, Callable
 
 from sqlalchemy import ColumnExpressionArgument, Engine
-from pymysql.err import ProgrammingError as MySqlProgrammingError
+# from pymysql.err import ProgrammingError as MySqlProgrammingError
+from pymysql.err import ProgrammingError
 from pymysql.constants import ER
-from sqlalchemy.exc import ProgrammingError as SqlAlchemyProgrammingError
+# from sqlalchemy.exc import ProgrammingError as SqlAlchemyProgrammingError
 from sqlalchemy.orm import Session
 
 from thinking_executor_data.dolt.sqlalchemy.engine import SqlAlchemyEngineLifecycle
@@ -17,7 +20,6 @@ from thinking_executor_data.common.storage import Storage, Repository, Repositor
     ExistByIds, Delete
 from thinking_executor_data.common.writability import WritabilityManager
 from thinking_executor_data.dolt.sqlalchemy.base import SqlAlchemyEntity
-from thinking_programming.tracing import traced
 
 #if this is simply `SQLFilter = ColumnExpressionArgument` (w/o `type` keyword)
 # then there are failures when declaring generic types referring to SQLFilter
@@ -27,27 +29,67 @@ from thinking_programming.tracing import traced
 # it's hard to explain properly; just remove the `type` and weep
 type SQLFilter = ColumnExpressionArgument
 
+
+log = getLogger(__name__)
+
+
 #I'm not sure if that's the best of ideas, but it will work as "auto-create DDL whenever needed"; todo: rethink this
 def create_schema_if_needed(repo):
     def decorator(foo):
         @wraps(foo)
         def wrapper(*args, **kwargs):
-            def _on_missing_table():
-                SqlAlchemyEntity.metadata.create_all(repo.session.bind)
-                repo.versioning.commit("DDL")
-                return foo(*args, **kwargs)
             try:
                 return foo(*args, **kwargs)
-            except MySqlProgrammingError as e:
-                if e.args[0] == ER.NO_SUCH_TABLE:
-                    return _on_missing_table()
-                raise
-            except SqlAlchemyProgrammingError as e:
-                if e.orig.args[0] == ER.NO_SUCH_TABLE:
-                    return _on_missing_table()
+            except BaseException as e:
+                exc = e
+                no_such_table = lambda: isinstance(exc, ProgrammingError) and exc.args[0] == ER.NO_SUCH_TABLE
+                has_context = lambda: exc.__context__ is not None
+                while not no_such_table() and has_context():
+                    exc = exc.__context__
+                if no_such_table():
+                    try:
+                        repo.session.rollback()
+                        # SqlAlchemyEntity.metadata.create_all(repo.session)
+                        SqlAlchemyEntity.metadata.create_all(repo.session.bind)
+                    except:
+                        raise
+                    try:
+                        repo.versioning.commit("DDL")
+                    except BaseException as y:
+                        to_log = "\n"+ "".join(traceback.format_exception(y))
+                        log.error(to_log)
+                        raise
+                    try:
+                        out = foo(*args, **kwargs)
+                        return out
+                    except:
+                        raise
                 raise
         return wrapper
     return decorator
+
+#todo extract this; expose it from Repository protocol
+class ProgressTracker[T](Protocol):
+    def track_progress(self, i: int, value: T): ...
+
+@dataclass
+class ApplyPeriodically[T](ProgressTracker[T]):
+    period: int
+    apply: Callable[[int, T], None]
+    phase: int = 0
+
+    def track_progress(self, i: int, value: T):
+        if i % self.period == self.phase:
+            self.apply(i, value)
+
+def track_with[T](iter: Iterable[T], tracker: ProgressTracker[T]) -> Iterable[T]:
+    if tracker is None:
+        return iter
+    def mapping(i_and_x):
+        tracker.track_progress(*i_and_x)
+        return i_and_x[1]
+    return map(mapping, enumerate(iter))
+
 
 
 class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
@@ -84,14 +126,15 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
     def metadata(self) -> RepositoryMetadata[type[E], ID, SQLFilter]:
         return RepositoryMetadata(self.entity_type, self._id_type(), SQLFilter)
 
-    def save(self, *entities: Collectable[E]) -> list[E]:
+    def save(self, *entities: Collectable[E], tracker: ProgressTracker[E] = None) -> list[E]:
         #w/o this local function, we couldn't pass self to the decorator
         @create_schema_if_needed(self)
         def _impl():
             self.writability.require_writing("dolt")
             out = None
+            to_save = collect(self.entity_type, *entities)
             with self.session.no_autoflush:
-                out = [self.session.merge(i) for i in collect(self.entity_type, *entities)]
+                out = [self.session.merge(i) for i in track_with(to_save, tracker)]
             self.session.flush(out)
             return out
         return _impl()
@@ -195,6 +238,7 @@ class DoltStorage(Injectable, Storage):
         self.session = sessions.session
         self.versioning = versioning
         self.writability = writability
+
 
     def supports_entity[E](self, t: type[E]) -> bool:
         return issubclass(t, SqlAlchemyEntity)

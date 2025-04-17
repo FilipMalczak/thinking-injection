@@ -13,6 +13,7 @@ from thinking_tests.simple import SimpleThinkingCase
 from thinking_tests.utils import caller_module_name, main_module_real_name
 
 
+
 #todo move to thinking-tests
 def assert_fails(l, exc_type=None):
     exc = None
