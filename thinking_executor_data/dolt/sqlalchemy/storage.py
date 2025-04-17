@@ -47,49 +47,14 @@ def create_schema_if_needed(repo):
                 while not no_such_table() and has_context():
                     exc = exc.__context__
                 if no_such_table():
-                    try:
-                        repo.session.rollback()
-                        # SqlAlchemyEntity.metadata.create_all(repo.session)
-                        SqlAlchemyEntity.metadata.create_all(repo.session.bind)
-                    except:
-                        raise
-                    try:
-                        repo.versioning.commit("DDL")
-                    except BaseException as y:
-                        to_log = "\n"+ "".join(traceback.format_exception(y))
-                        log.error(to_log)
-                        raise
-                    try:
-                        out = foo(*args, **kwargs)
-                        return out
-                    except:
-                        raise
+                    repo.session.rollback()
+                    SqlAlchemyEntity.metadata.create_all(repo.session.bind)
+                    repo.versioning.commit("DDL")
+                    out = foo(*args, **kwargs)
+                    return out
                 raise
         return wrapper
     return decorator
-
-#todo extract this; expose it from Repository protocol
-class ProgressTracker[T](Protocol):
-    def track_progress(self, i: int, value: T): ...
-
-@dataclass
-class ApplyPeriodically[T](ProgressTracker[T]):
-    period: int
-    apply: Callable[[int, T], None]
-    phase: int = 0
-
-    def track_progress(self, i: int, value: T):
-        if i % self.period == self.phase:
-            self.apply(i, value)
-
-def track_with[T](iter: Iterable[T], tracker: ProgressTracker[T]) -> Iterable[T]:
-    if tracker is None:
-        return iter
-    def mapping(i_and_x):
-        tracker.track_progress(*i_and_x)
-        return i_and_x[1]
-    return map(mapping, enumerate(iter))
-
 
 
 class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
@@ -126,7 +91,7 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
     def metadata(self) -> RepositoryMetadata[type[E], ID, SQLFilter]:
         return RepositoryMetadata(self.entity_type, self._id_type(), SQLFilter)
 
-    def save(self, *entities: Collectable[E], tracker: ProgressTracker[E] = None) -> list[E]:
+    def save(self, *entities: Collectable[E]) -> list[E]:
         #w/o this local function, we couldn't pass self to the decorator
         @create_schema_if_needed(self)
         def _impl():
@@ -134,7 +99,7 @@ class DoltRepository[E: SqlAlchemyEntity, ID](Repository[E, ID, SQLFilter]):
             out = None
             to_save = collect(self.entity_type, *entities)
             with self.session.no_autoflush:
-                out = [self.session.merge(i) for i in track_with(to_save, tracker)]
+                out = [self.session.merge(i) for i in to_save]
             self.session.flush(out)
             return out
         return _impl()
