@@ -39,8 +39,15 @@ requires-python = ">=3.12"
 Homepage = "https://github.com/FilipMalczak/thinking-injection"
 
 [tool.setuptools]
-#todo keep this up to date!!!
+#todo keep this up to date!!! use list_packages.py to generate it
 packages = [
+    "thinking_executor",
+    "thinking_executor.callbacks",
+    "thinking_executor.data",
+    "thinking_executor_data",
+    "thinking_executor_data.common",
+    "thinking_executor_data.dolt",
+    "thinking_executor_data.dolt.sqlalchemy",
     "thinking_injection",
     "thinking_injection.common",
     "thinking_injection.context",
@@ -51,7 +58,6 @@ packages = [
     "thinking_programming",
     "thinking_reflection",
     "thinking_reflection.model",
-    "thinking_executor",
-    "thinking_executor.callbacks",
-    "thinking_executor.data"
+    "thinking_services",
+    "thinking_services.containers"
 ]
