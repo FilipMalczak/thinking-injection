@@ -129,6 +129,32 @@ with setup(setup_context):
             executor = index.instance(TaskExecutor)
             executor.execute_stage("top", top_level)
         assert trace == [['top'], 'INITIAL_END'], f"Actual trace: {trace}"
+    @case
+    def test_skipping_stages_between_sessions(setup):
+        ctx = setup["ctx"]
+        with ctx.lifecycle() as index:
+            executor = index.instance(TaskExecutor)
+            trace = []
+            def top_level():
+                trace.append(executor.current_path)
+
+                def first():
+                    trace.append(executor.current_key)
+
+                executor.execute_step(1, first)
+                trace.append("INITIAL_END")
+
+            executor.execute_stage("top", top_level)
+
+            assert trace == [ ["top"], 1, "INITIAL_END" ]
+        log.info("Rerun")
+        trace = []
+
+        with ctx.lifecycle() as index:
+            executor = index.instance(TaskExecutor)
+            with executor.skip_executed_stages(True):
+                executor.execute_stage("top", top_level)
+        assert trace == [], f"Actual trace: {trace}"
 
     @case
     def running_twice_with_decorators_in_the_same_session_doesnt_skip(setup):

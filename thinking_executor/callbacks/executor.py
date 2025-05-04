@@ -28,7 +28,6 @@ class StepExecutorCallback:
     def on_task_skipped(self, exec_log: TaskExecutionRecord):
         if exec_log.coordinates.task_type == TaskType.STEP:
             self.on_step_skipped(exec_log)
-        #fixme stages should never be skippable
         elif exec_log.coordinates.task_type == TaskType.STAGE:
             self.on_stage_skipped(exec_log)
         else:

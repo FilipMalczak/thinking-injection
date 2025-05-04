@@ -90,6 +90,8 @@ class VersioningManager(Injectable):
         return any(v.is_dirty() for v in self.versionings)
 
     def ensure_empty_branch(self, coordinates: TaskCoordinates):
+        #todo add strategy to control delete/rename/other options
+        #todo removing unmerged dolt branch can yield errors
         for v in self.versionings:
             if v.has_branch(coordinates):
                 v.delete_branch(coordinates)

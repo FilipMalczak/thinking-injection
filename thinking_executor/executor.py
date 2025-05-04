@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
 from logging import getLogger
-from typing import Any, Callable
+from typing import Any, Callable, ContextManager
 
+from thinking_programming.exceptions import UnreachableInstructionException
 from thinking_tests.fluent_decorator import fluent_method_decorator
 
 from thinking_executor.callbacks.executor import CompositeStepExecutorCallback, StepExecutorCallback
@@ -74,7 +75,8 @@ class ExecutorDecoratorsMixin(FluentExecutorMixin):
 
 
 @interface
-class TaskExecutor(ExecutorDecoratorsMixin): ...
+class TaskExecutor(ExecutorDecoratorsMixin):
+    def skip_executed_stages(self, value: bool) -> ContextManager: ...
 
 # DO NOT DISCOVER THIS! allow the executor to add this callback instead; it will avoid doing that if you purposefully
 #  register subclass of this callback, but if you're not doing some magic, let the framework handle this for you
@@ -85,6 +87,19 @@ class StepTrackingCallback(StepExecutorCallback):
     def on_step_invoked(self, start: datetime, coordinates: TaskCoordinates):
         self.session_manager.mark_invoked_step(coordinates)
 
+class StagesSkippingScope:
+    def __init__(self, executor: 'SimpleTaskExecutor', value: bool):
+        self.previous_value = executor._skip_executed_stages
+        self.executor = executor
+        self.value = value
+        executor._skip_executed_stages = value
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.executor._skip_executed_stages = self.previous_value
+
 @discover
 @PrimaryImplementation(TaskExecutor)
 class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
@@ -94,6 +109,8 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         self.session: ContextSessionPointer = None
         self.session_manager: PersistentSessionManager = None
         self.callbacks: CompositeStepExecutorCallback = CompositeStepExecutorCallback()
+        self._skip_executed_stages: bool = False
+        self.latest_step: TaskCoordinates = None
 
     def inject_requirements(self, session_manager: PersistentSessionManager, callbacks: list[StepExecutorCallback], tiny: TinyDBLifecycle):
         self.session_manager = session_manager
@@ -168,6 +185,9 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         log.error(''.join(traceback.format_exception(e)))
         return False
 
+    def skip_executed_stages(self, value: bool) -> ContextManager:
+        return StagesSkippingScope(self, value)
+
     def execute(self, task_key: TaskKey, task_body: Callable, task_type: TaskType, task_args: Args = None):
         self._assert_initialized()
         assert isinstance(task_type, TaskType), f"task_type argument must be one of {', '.join(x.name for x in TaskType)}"
@@ -184,23 +204,14 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         coordinates = TaskCoordinates(step_path, step_order, task_type)
         self.callbacks.on_task_submitted(coordinates)
         exec_log = self._find_execution_log(coordinates)
-
-        if exec_log is not None and task_type == TaskType.STEP:
-            log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
+        args = task_args or Args()
+        def skip():
+            log.info(
+                f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
             log.debug(f"Detailed execution log: {exec_log}")
             self.stack[-1].next_subtask_order[-1] += 1
-            # self.consistency_manager.skip(coordinates) #fixme
             self.callbacks.on_task_skipped(exec_log)
-        else:
-            #todo currently only the first execution log for stages is stored; maybe mark each stage run instead?
-            args = task_args or Args()
-            if exec_log is None:
-                log.info(f"Task {coordinates} hasn't been executed yet")
-            else:
-                log.info(f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
-                log.info(f"Rerunning {coordinates} nontheless, as it is a stage")
-                log.debug(f"Detailed execution log: {exec_log}")
-            log.debug(f"Task arguments: {args}")
+        def run(exec_log: TaskExecutionRecord | None = None):
             try:
                 self.stack.append(ExecutionFrame(step_path, step_order + [0], task_type))
                 start = datetime.now()
@@ -212,7 +223,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                 if exec_log is not None:
                     log.debug("Task already marked as finished")
                 else:
-                    exec_log = self._mark_finished(coordinates, start, finish)
+                    exec_log = self._mark_finished(coordinates, start, finish, self.latest_step)
                     log.debug("Task marked as finished")
                     log.debug(f"Detailed execution log: {exec_log}")
 
@@ -227,6 +238,25 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                 self.stack[-2].next_subtask_order[-1] += 1
                 self.stack.pop()
 
+        if task_type == TaskType.STEP:
+            if exec_log is not None:
+                skip()
+            else:
+                run()
+            self.latest_step = coordinates
+        elif task_type == TaskType.STAGE:
+            if exec_log is not None:
+                if self._skip_executed_stages:
+                    skip()
+                    self.latest_step = exec_log.latest_step
+                else:
+                    run(exec_log)
+                    assert exec_log.latest_step == self.latest_step #todo msg, configurability
+            else:
+                run()
+        else:
+            UnreachableInstructionException.guard(f"Unknown task type: {task_type}")
+
 
     #todo https://stackoverflow.com/questions/12594148/skipping-execution-of-with-block
 
@@ -234,13 +264,14 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
     def _find_execution_log(self, coordinates: TaskCoordinates) -> TaskExecutionRecord | None:
         ExecLog = Query()
         found = self.table.search((ExecLog.coordinates.path == coordinates.path) & (ExecLog.coordinates.order == coordinates.order))
-        assert len(found) < 2, f"Database inconsistency! More than one ({len(found)}) execution logs found for {coordinates}"
+        assert len(found) < 2 or coordinates.task_type == TaskType.STAGE, f"Database inconsistency! More than one ({len(found)}) execution logs found for {coordinates}"
         if found:
+            found = sorted(found, key=lambda record: record.finish, reverse=True)
             return found[0]
         return None
 
-    def _mark_finished(self, coordinates: TaskCoordinates, start: datetime, finish: datetime):
-        record = TaskExecutionRecord(coordinates, self.session.runtime_sid, self.session.context_session_no, start, finish)
+    def _mark_finished(self, coordinates: TaskCoordinates, start: datetime, finish: datetime, latest_step: TaskCoordinates | None):
+        record = TaskExecutionRecord(coordinates, self.session.runtime_sid, self.session.context_session_no, start, finish, latest_step)
         self.table.insert(record)
         return record
 

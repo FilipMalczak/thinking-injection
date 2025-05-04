@@ -159,3 +159,4 @@ class TaskExecutionRecord(SerializableMixin):
     session_no: int
     start: datetime
     finish: datetime
+    latest_step: TaskCoordinates = None
