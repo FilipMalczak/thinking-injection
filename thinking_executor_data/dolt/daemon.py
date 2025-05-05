@@ -36,7 +36,7 @@ class DoltDaemonConfig(NamedTuple):
     repo_check: list[str] = ["status"]
     # fixme this is useless - it will work in any directory, even the non-dolt ones; select from schemata instead?
     healthcheck_sql: str = "select current_timestamp();"
-    interweave_logs: bool = True
+    interweave_logs: bool = False #todo make it ocnfigurable via envvar?
 
 @interface
 class DoltDaemonConfigFactory(Protocol):
