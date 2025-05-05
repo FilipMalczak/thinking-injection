@@ -36,6 +36,7 @@ class DoltDaemonConfig(NamedTuple):
     repo_check: list[str] = ["status"]
     # fixme this is useless - it will work in any directory, even the non-dolt ones; select from schemata instead?
     healthcheck_sql: str = "select current_timestamp();"
+    interweave_logs: bool = True
 
 @interface
 class DoltDaemonConfigFactory(Protocol):
@@ -165,13 +166,23 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
             self.executable.command("sql", "-q", sql)
 
     def _start(self):
+        log.info("Starting dolt daemon process")
+        kwargs = {}
+        #todo similar config with docker
+        if self.daemon_config.interweave_logs:
+            logger = getLogger(__name__+".subprocess")
+            kwargs["log_consumer"] = logger.info
         self.daemon_process = self.executable.daemon(
-            "sql-server", "-H", "0.0.0.0", "-P", str(self.daemon_config.port)
+            "sql-server", "--loglevel", "debug", "-H", "0.0.0.0", "-P", str(self.daemon_config.port),
+            **kwargs
         )
+        log.info("Dolt daemon started")
 
     def _stop(self):
+        log.info("Stopping dolt daemon process")
         self.daemon_process.terminate()
         self.daemon_process.wait()
+        log.info("Dolt daemon terminated")
 
     def _dolt_sql_check(self) -> bool:
         return self.executable.check("sql", "-q", self.daemon_config.healthcheck_sql)

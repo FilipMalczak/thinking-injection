@@ -1,5 +1,5 @@
 from collections import namedtuple
-
+from typing import Any
 
 class Outcome: pass
 
@@ -36,8 +36,9 @@ class ToBeContinuedException(Exception):
     __repr__ = __str__
 
 
-def outcome_of(result, exception: BaseException = None):
+def outcome_of(*, result: Any | None = None, exception: BaseException | None = None):
     if exception is not None:
+        assert result is None #todo msg
         if isinstance(exception, ToBeContinuedException):
             return ToBeContinued(exception.comment)
         elif isinstance(exception, KeyboardInterrupt):
