@@ -1,5 +1,5 @@
 from logging import getLogger
-from subprocess import Popen, run, PIPE, STDOUT
+from subprocess import Popen, run, PIPE, STDOUT, DEVNULL
 from typing import NamedTuple
 
 from thinking_services.logs import LogConsumer, consume_log_text, consume_log_stream
@@ -23,7 +23,14 @@ class Program(NamedTuple):
             kwargs["cwd"] = cwd
         consumer = log_consumer or self.log_consumer
         if consumer:
+            #this is tricky; we have a child process and a parent process;
+            # when a parent gets Ctril+C == SIGINT == KeyboardInterrupt,
+            # it MAY get propagated to the child process;
+            # because of that we pipe stdin to /dev//null, so that if the
+            # interpreter closes the streams in SIGINT, it doesn't impact
+            # subprocess lifecycle
             kwargs.update(dict(
+                stdin=DEVNULL,
                 stdout=PIPE,
                 stderr=STDOUT,
                 text=True,

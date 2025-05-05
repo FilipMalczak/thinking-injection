@@ -29,9 +29,15 @@ class WritabilityManager:
         self._access = ReadWrite.RW
 
     def disallow_writing(self):
-        assert self._access == ReadWrite.RW
-        log.debug("Writing disallowed")
+        # initially there was `assert self._access == ReadWrite.RW` here
+        # but I think that we should disallow writing at any time - even if already disallowed;
+        # the rationale behind it is that RO mode should be the default and the RW mode should be treated as special;
+        # along these lines, at any time you should be able to say "disallow writing" to make sure you're in the default
+        # mode
+        prev_access = self._access
         self._access = ReadWrite.RO
+        if prev_access != ReadWrite.RO:
+            log.debug("Writing disallowed")
 
     def require_writing(self, db: str=None):
         """

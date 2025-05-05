@@ -137,7 +137,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         self.stack = None
         session = self.session
         self.session = None
-        outcome = outcome_of(exception)
+        outcome = outcome_of(exception=exception)
         self.callbacks.after_session(datetime.now(), session, outcome)
 
     def _assert_initialized(self, action="usage"):
@@ -176,7 +176,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         '''
         finish = datetime.now()
 
-        outcome = outcome_of(e)
+        outcome = outcome_of(exception=e)
 
         log.error(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
         self.callbacks.on_task_finished(start, finish, coordinates, outcome)
@@ -207,27 +207,28 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
         args = task_args or Args()
         def skip():
             log.info(
-                f"Task {coordinates} has already been executed on {exec_log.start} (finished on {exec_log.finish})")
+                # this additional space before "task" is there to align these logs optically between
+                # "skipping" and "executing"
+                f"Skipping  task {coordinates} (already executed between {exec_log.start} and {exec_log.finish})"
+            )
             log.debug(f"Detailed execution log: {exec_log}")
             self.stack[-1].next_subtask_order[-1] += 1
             self.callbacks.on_task_skipped(exec_log)
-        def run(exec_log: TaskExecutionRecord | None = None):
+        def run():
             try:
                 self.stack.append(ExecutionFrame(step_path, step_order + [0], task_type))
                 start = datetime.now()
-                log.debug("Executing task body")
+                log.info(f"Executing task {coordinates}")
                 self.callbacks.on_task_invoked(start, coordinates)
                 args.invoke(task_body)
                 finish = datetime.now()
-                log.info(f"Task finished executing at {finish}")
-                if exec_log is not None:
-                    log.debug("Task already marked as finished")
-                else:
-                    exec_log = self._mark_finished(coordinates, start, finish, self.latest_step)
-                    log.debug("Task marked as finished")
-                    log.debug(f"Detailed execution log: {exec_log}")
+                log.info(f"Task {coordinates} finished executing")
+                exec_log = self._mark_finished(coordinates, start, finish, self.latest_step)
+                log.debug(f"Task {coordinates} marked as finished")
+                log.debug(f"Detailed execution log: {exec_log}")
 
-                self.callbacks.on_task_finished(start, finish, coordinates, Success())
+                #todo we support saving the results, but we don't expose the result value anywhere; I think tasks shouldn't have results
+                self.callbacks.on_task_finished(start, finish, coordinates, outcome_of(result=None))
             except Exception as e:
                 if self._exception_handler(e, start, coordinates):
                     raise
@@ -250,8 +251,8 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                     skip()
                     self.latest_step = exec_log.latest_step
                 else:
-                    run(exec_log)
-                    assert exec_log.latest_step == self.latest_step #todo msg, configurability
+                    run()
+                    # assert exec_log.latest_step == self.latest_step #todo msg, configurability
             else:
                 run()
         else:
@@ -263,7 +264,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
     #todo expose ?
     def _find_execution_log(self, coordinates: TaskCoordinates) -> TaskExecutionRecord | None:
         ExecLog = Query()
-        found = self.table.search((ExecLog.coordinates.path == coordinates.path) & (ExecLog.coordinates.order == coordinates.order))
+        found = self.table.search(ExecLog.coordinates == coordinates)
         assert len(found) < 2 or coordinates.task_type == TaskType.STAGE, f"Database inconsistency! More than one ({len(found)}) execution logs found for {coordinates}"
         if found:
             found = sorted(found, key=lambda record: record.finish, reverse=True)

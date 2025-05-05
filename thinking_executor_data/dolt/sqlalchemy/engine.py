@@ -1,16 +1,11 @@
-from logging import getLogger
-from time import sleep
-
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from thinking_executor_data.dolt.daemon import DoltConectionConfig, DoltConnectionConfigFactory
-from thinking_executor_data.dolt.sqlalchemy.base import SqlAlchemyEntity
 from thinking_injection.injectable import Injectable
 from thinking_programming.exceptions import NoneValueException
 
-log = getLogger(__name__)
 
 class SqlAlchemyEngineLifecycle(Injectable):
     def __init__(self):
@@ -25,7 +20,6 @@ class SqlAlchemyEngineLifecycle(Injectable):
         #todo general cleanup of this method
 
         db_connection = self._connection_config.mysql_connection_str
-        log.info(f"Creating engine for workload: {db_connection}")
         self._engine = create_engine(
             db_connection
             #todo make these ("echo") configurable
@@ -40,10 +34,30 @@ class SqlAlchemyEngineLifecycle(Injectable):
         self._session = Session(self._engine)
 
     def deinitialize(self, exc: BaseException | None) -> None:
+        # if we lose connection during this stage of deinitializing, we shouldn't care;
+        # we already handled the consistency stuff, so what we try to do with the connection handles is that we try
+        # to make them useless in the future; if they are already useless - yay!
+        def _ignore_lost_connection(foo, *args):
+            try:
+                return foo(*args)
+            except OperationalError as e:
+                handled = False
+                try:
+                    #todo this is very much pymysql; will need to change that if we enable multiple backends
+                    if e.orig.args[0] == 2013: # code for lost connection
+                        handled = True
+                except:
+                    pass
+                if not handled:
+                    raise
         try:
-            self._session.close()
+            _ignore_lost_connection(self._session.close)
         finally:
-            self._engine.dispose(True)
+            try:
+                _ignore_lost_connection(self._engine.dispose, True)
+            finally:
+                self._session = None
+                self._engine = None
 
     @property
     def engine(self) -> Engine:

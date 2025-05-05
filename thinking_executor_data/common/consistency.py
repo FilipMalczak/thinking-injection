@@ -1,10 +1,11 @@
 from datetime import datetime
+from logging import getLogger
 from warnings import warn
 
 from thinking_executor.callbacks.executor import StepExecutorCallback
 from thinking_executor.callbacks.session import SessionCallback
 from thinking_executor.executor_model import TaskExecutionRecord, TaskCoordinates
-from thinking_executor.session_model import ContextSessionPointer, RuntimeSession
+from thinking_executor.session_model import RuntimeSession
 from thinking_executor_data.common.versioning import VersioningManager
 from thinking_executor_data.common.writability import WritabilityManager
 from thinking_injection.injectable import Injectable
@@ -16,6 +17,7 @@ class UnmanagedWritesWarning(UserWarning):
     def __init__(self):
         UserWarning.__init__(self, "It seems that you performed data writes (including deletes or updates) within a read-only task")
 
+log = getLogger(__name__)
 
 @discover
 class ConsistentDataVersioningCallback(Injectable, StepExecutorCallback, SessionCallback):
@@ -32,6 +34,10 @@ class ConsistentDataVersioningCallback(Injectable, StepExecutorCallback, Session
         # to check for cases of power outage, forceful system shutdown, straight-on killing the process, etc
         # so only the last context session may be dirty
         if previous_session is not None and not previous_session.last_context_session().sanitized:
+            log.info(f"Sanitizing previous session (runtime session: "
+                     f"{previous_session.sid}, {previous_session.metadata}; "
+                     f"context session: {previous_session.last_context_session().session_no},"
+                     f"started on: {previous_session.last_context_session().started_on})")
             self.versioning.rollback()
             previous_session.last_context_session().sanitized = True
             return True
@@ -39,6 +45,9 @@ class ConsistentDataVersioningCallback(Injectable, StepExecutorCallback, Session
 
     def on_step_skipped(self, exec_log: TaskExecutionRecord):
         self.versioning.checkout(exec_log.coordinates)
+
+    def on_stage_skipped(self, exec_log: TaskExecutionRecord):
+        self.versioning.checkout(exec_log.latest_step)
 
     def on_step_invoked(self, start: datetime, coordinates: TaskCoordinates):
         self.versioning.ensure_empty_branch(coordinates)

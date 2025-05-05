@@ -7,7 +7,6 @@ from thinking_executor.executor_model import TaskCoordinates
 from thinking_executor_data.common.versioning import BranchNameAdapter, Versioning, UuidBranchNameAdapter
 from thinking_executor_data.dolt.sqlalchemy.engine import SqlAlchemyEngineLifecycle
 from thinking_injection.injectable import Injectable
-from thinking_programming.names import make_uuid
 from thinking_reflection.discovery import discover
 
 log = getLogger(__name__)
@@ -53,7 +52,11 @@ class SqlAlchemyDoltVersioning(Versioning, Injectable):
 
     def delete_branch(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)
-        self._call_procedure("DOLT_BRANCH", "-d", name)
+        #-D == --delete --force
+        #w/o --force it would fail if branch wasn't fully merged, which may happen
+        #todo introduce configurable strategy; for example: rename the branch with some suffix instead of deleting;
+        # may be useful for auditing and debugging
+        self._call_procedure("DOLT_BRANCH", "-D", name)
 
     def checkout(self, coordinates: TaskCoordinates):
         name = self.name_adapter().to_branch_name(coordinates)

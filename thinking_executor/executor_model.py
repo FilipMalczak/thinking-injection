@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import NamedTuple, Union, Any, Callable, Self, Iterable
 
 from thinking_executor.data.tiny_schema import tiny_table
-from thinking_programming.serialization import SerializableMixin
+from thinking_programming.serialization import SerializableMixin, CustomSerializable
 from thinking_programming.collectable import Collectable, collect
 
 TaskKey = Union[str, int]
@@ -77,7 +77,7 @@ class CoordinatePart(NamedTuple):
         return TaskCoordinates([self.key], [self.order], TaskType.STAGE)
 
 @dataclass
-class TaskCoordinates(SerializableMixin):
+class TaskCoordinates(CustomSerializable):
     path: TaskPath
     order: list[int]  # todo alias StepOrder
     task_type: TaskType
@@ -138,6 +138,13 @@ class TaskCoordinates(SerializableMixin):
             except ValueError:
                 pass
         return TaskCoordinates(path, order, task_type)
+
+    def serialize(self) -> str:
+        return str(self)
+
+    @classmethod
+    def deserialize(cls: type[Self], data: str) -> Self:
+        return cls.parse(data)
 
     def __add__(self, other: CoordinatePart) -> Self:
         assert isinstance(other, CoordinatePart)
