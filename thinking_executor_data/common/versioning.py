@@ -87,7 +87,7 @@ class VersioningManager(Injectable):
         log.info(f"Found {len(versionings)} versionings:")
         for i, v in enumerate(versionings):
             log.info(f"Versioning #{i+1}: {v}")
-        self.callbacks.add_delegate(callbacks)
+        self.callbacks.add_delegate(*callbacks)
 
     @property
     def is_dirty(self) -> bool:
