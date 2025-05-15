@@ -15,7 +15,21 @@ class Program(NamedTuple):
     def run(self, *cmd: str, blocking: bool = True, cwd: str = None, log_consumer: LogConsumer = None) -> Popen:
         full_cmd = [self.base_command] + list(cmd)
         spawn = run if blocking else Popen
-        kwargs = {}
+
+        # this is tricky; we have a child process and a parent process;
+        # when a parent gets Ctril+C == SIGINT == KeyboardInterrupt,
+        # it MAY get propagated to the child process;
+        # because of that we pipe stdin to /dev//null, so that if the
+        # interpreter closes the streams in SIGINT, it doesn't impact
+        # subprocess lifecycle
+        #
+        # by default we disable stdout/-err; it will be PIPEd only
+        # if the log consumer is provided
+        kwargs = dict(
+            stdin=DEVNULL,
+            stdout=DEVNULL,
+            stderr=DEVNULL
+        )
         if not blocking:
             kwargs["start_new_session"] = True
         cwd = cwd or self.cwd
@@ -23,14 +37,7 @@ class Program(NamedTuple):
             kwargs["cwd"] = cwd
         consumer = log_consumer or self.log_consumer
         if consumer:
-            #this is tricky; we have a child process and a parent process;
-            # when a parent gets Ctril+C == SIGINT == KeyboardInterrupt,
-            # it MAY get propagated to the child process;
-            # because of that we pipe stdin to /dev//null, so that if the
-            # interpreter closes the streams in SIGINT, it doesn't impact
-            # subprocess lifecycle
             kwargs.update(dict(
-                stdin=DEVNULL,
                 stdout=PIPE,
                 stderr=STDOUT,
                 text=True,

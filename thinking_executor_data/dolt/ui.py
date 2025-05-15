@@ -1,6 +1,6 @@
 import json
 from os import makedirs
-from os.path import abspath, join
+from os.path import abspath, join, exists
 
 from thinking_services.containers.protocol import ContainerClient, Container, HostMount, LocalVolume
 from thinking_executor.data.persistence import ProjectPersistenceDirectoryProvider
@@ -21,8 +21,9 @@ class DoltUi: #don't extend Injectable (they are automatically discovered)
         self.daemon = daemon
 
     def _initialize_connection_store(self):
-        #todo cleanup if needed?
-        makedirs(self.connection_store)
+        if not exists(self.connection_store):
+            # todo cleanup if needed?
+            makedirs(self.connection_store)
 
     def _fill_connection_store(self):
         data = {

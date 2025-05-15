@@ -328,12 +328,13 @@ class SimpleRegistry(CustomizableTypeRegistry):
                 unknowns.append(x)
             for v in self.data.values():
                 v.dependencies = {d for d in v.dependencies if d.type_ != x}
-                v.implementations.remove(x)
+                v.implementations.discard(x)
                 if v.forced_primary == x:
                     v.forced_primary = None
-        if unknowns:
-            #todo UnknownTypesException.guard(unknowns)
-            raise UnknownTypesException("Cannot remove unknown types from type registry", unknowns)
+        #todo replace the following with the warning
+        # if unknowns:
+        #     #todo UnknownTypesException.guard(unknowns)
+        #     raise UnknownTypesException("Cannot remove unknown types from type registry", unknowns)
 
     def known_types(self) -> ImmutableTypeSet:
         return frozenset(self.data.keys())

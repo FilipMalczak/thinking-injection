@@ -211,6 +211,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                 # "skipping" and "executing"
                 f"Skipping  task {coordinates} (already executed between {exec_log.start} and {exec_log.finish})"
             )
+            log.info(f"Saved {exec_log.finish - exec_log.start}")
             log.debug(f"Detailed execution log: {exec_log}")
             self.stack[-1].next_subtask_order[-1] += 1
             self.callbacks.on_task_skipped(exec_log)
@@ -223,6 +224,7 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
                 args.invoke(task_body)
                 finish = datetime.now()
                 log.info(f"Task {coordinates} finished executing")
+                log.info(f"Spent {finish - start}")
                 exec_log = self._mark_finished(coordinates, start, finish, self.latest_step)
                 log.debug(f"Task {coordinates} marked as finished")
                 log.debug(f"Detailed execution log: {exec_log}")

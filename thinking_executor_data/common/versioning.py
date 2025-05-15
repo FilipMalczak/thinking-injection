@@ -4,6 +4,8 @@ from typing import Protocol
 from thinking_modules.immutable import Immutable
 
 from thinking_executor.executor_model import TaskCoordinates
+from thinking_executor_data.common.callbacks.versioning import VersioningManagerCallback, \
+    CompositeVersioningManagerCallback
 from thinking_injection.injectable import Injectable
 from thinking_programming.names import make_uuid, resolve_uuid
 from thinking_reflection.discovery import discover
@@ -78,18 +80,21 @@ class Versioning(Protocol):
 class VersioningManager(Injectable):
     def __init__(self):
         self.versionings: tuple[Versioning] = None
+        self.callbacks: CompositeVersioningManagerCallback = CompositeVersioningManagerCallback()
 
-    def inject_requirements(self, versionings: list[Versioning]) -> None:
+    def inject_requirements(self, versionings: list[Versioning], callbacks: list[VersioningManagerCallback]) -> None:
         self.versionings = tuple(versionings)
         log.info(f"Found {len(versionings)} versionings:")
         for i, v in enumerate(versionings):
             log.info(f"Versioning #{i+1}: {v}")
+        self.callbacks.add_delegate(callbacks)
 
     @property
     def is_dirty(self) -> bool:
         return any(v.is_dirty() for v in self.versionings)
 
     def ensure_empty_branch(self, coordinates: TaskCoordinates):
+        self.callbacks.on_ensure_empty_branch(coordinates)
         #todo add strategy to control delete/rename/other options
         #todo removing unmerged dolt branch can yield errors
         for v in self.versionings:
@@ -98,13 +103,16 @@ class VersioningManager(Injectable):
             v.new_branch(coordinates)
 
     def checkout(self, coordinates: TaskCoordinates):
+        self.callbacks.on_checkout(coordinates)
         for v in self.versionings:
             v.checkout(coordinates)
 
     def commit(self):
+        self.callbacks.on_commit()
         for v in self.versionings:
             v.commit()
 
     def rollback(self):
+        self.callbacks.on_rollback()
         for v in self.versionings:
             v.rollback()

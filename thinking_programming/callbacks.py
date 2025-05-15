@@ -51,6 +51,7 @@ class Composite[T]:
     delegates: list[T] = field(default_factory=list)
 
     #todo use collectable
+    #todo pluralize?
     def add_delegate(self, *delegates: T):
         self.delegates.extend(delegates)
 

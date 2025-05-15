@@ -1,3 +1,4 @@
+import os
 from logging import getLogger
 from os import makedirs
 from os.path import exists, join, isdir
@@ -36,7 +37,8 @@ class DoltDaemonConfig(NamedTuple):
     repo_check: list[str] = ["status"]
     # fixme this is useless - it will work in any directory, even the non-dolt ones; select from schemata instead?
     healthcheck_sql: str = "select current_timestamp();"
-    interweave_logs: bool = False #todo make it ocnfigurable via envvar?
+    # todo it would be nicer to handle it via some abstraction (facet?); it's easy to miss this config
+    interweave_logs: bool = "INCLUDE_DOLT_LOGS" in os.environ.keys()
 
 @interface
 class DoltDaemonConfigFactory(Protocol):
@@ -58,7 +60,7 @@ class CommonDoltConfigFactory(Injectable, DoltDaemonConfigFactory):
         else:
             return DoltDaemonConfig(f"{self.dir_provider.project_data_dir()}/dolt")
 
-
+#todo typo
 class DoltConectionConfig(NamedTuple):
     mysql_connection_str: str
 
@@ -190,7 +192,7 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
     def _pymysql_check(self) -> bool:
         c = None
         try:
-            log.debug(f"Trying to connect via PyMySQL to {self.connection_config.mysql_connection_str}")
+            log.info(f"Trying to connect via PyMySQL to {self.connection_config.mysql_connection_str}")
             c = pymysql.connect(
                 host="localhost",
                 port=self.daemon_config.port,
@@ -201,7 +203,7 @@ class DoltDaemon(Injectable, DoltConnectionConfigFactory):
             log.debug("Connection established")
             return True
         except DatabaseError as e:
-            log.debug(f"Got a DatabaseError {e}")
+            log.error(f"Got a DatabaseError {e}")
             return False
         finally:
             if c is not None:

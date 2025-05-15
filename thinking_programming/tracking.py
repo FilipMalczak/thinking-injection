@@ -1,5 +1,5 @@
 """
-Used to decorate iterable with actions per-element. Mostly useful for tracking progress of forach.
+Used to decorate iterable with actions per-element. Mostly useful for tracking progress of foreach.
 Following code logs every 100th entity and logs when the iterable is exhausted:
 
 for entity in track(

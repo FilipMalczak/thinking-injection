@@ -46,6 +46,7 @@ packages = [
     "thinking_executor.data",
     "thinking_executor_data",
     "thinking_executor_data.common",
+    "thinking_executor_data.common.callbacks",
     "thinking_executor_data.dolt",
     "thinking_executor_data.dolt.sqlalchemy",
     "thinking_injection",
