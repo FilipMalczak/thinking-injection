@@ -180,10 +180,11 @@ class SimpleTaskExecutor(Injectable, TaskExecutor, StrReprMixin):
 
         log.error(f"Task {coordinates} stopped before finishing (outcome: {outcome})")
         self.callbacks.on_task_finished(start, finish, coordinates, outcome)
-        if not isinstance(e, ToBeContinuedException) or len(coordinates) > 1:
+        if len(coordinates) > 1:
             return True
-        log.error(''.join(traceback.format_exception(e)))
-        return False
+        else:
+            log.error(''.join(traceback.format_exception(e)))
+            return not isinstance(e, ToBeContinuedException)
 
     def skip_executed_stages(self, value: bool) -> ContextManager:
         return StagesSkippingScope(self, value)
